@@ -1,8 +1,8 @@
 module ParseTest where
 
 import qualified Data.Map as M
-import Parser
-import Typecheck
+import Autosubst.Parser
+import Autosubst.Types
 
 -- Errors
 

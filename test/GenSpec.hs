@@ -9,8 +9,8 @@ import           Control.Monad
 import qualified Data.Map        as M
 import           Test.QuickCheck
 
-import           Parser
-import           Typecheck
+import           Autosubst.Parser
+import           Autosubst.Types
 
 -- Generate arbitrary well-formed specs
 
