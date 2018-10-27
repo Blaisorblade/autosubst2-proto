@@ -789,24 +789,20 @@ Proof. reflexivity. Qed.
 
 
 Instance asimplInst_TNat (sigma: subst_of subst_of_ty) : AsimplInst_ty (TNat ) sigma (TNat ).
-reflexivity. Qed.
-
-Hint Resolve subst_eq_ty subst_eq_vl subst_eq_tm.
+Admitted.
 Instance asimplInst_TAll (s0 s1 s0' s1': _)
 (sigma theta_0 theta_1: subst_of subst_of_ty)
 (E_0': AsimplSubst_ty (sigma) theta_0)
 (E_1': AsimplSubst_ty ((up_ty_vl sigma)) theta_1)
 (E_0: AsimplInst_ty s0 theta_0 s0')
 (E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TAll s0 s1) sigma (TAll s0' s1').
-Proof. hnf; cbn; rewrite <- E_0, <- E_1. f_equal; auto. Qed.
-
+Admitted.
 Instance asimplInst_TSel (s0 s0': _)
 (sigma: subst_of subst_of_ty)
 (theta_0: subst_of subst_of_vl)
 (E_0': AsimplSubst_vl (((cast_ty_vl sigma))) theta_0)
 (E_0: AsimplInst_vl s0 theta_0 s0') : AsimplInst_ty (TSel s0) sigma (TSel s0').
-Proof. hnf; cbn. rewrite <- E_0. f_equal; auto. Qed.
-
+Admitted.
 Instance asimplInst_TSelA (s0 s1 s0' s1': _)
 (sigma: subst_of subst_of_ty)
 (theta_0: subst_of subst_of_vl)
@@ -815,21 +811,19 @@ Instance asimplInst_TSelA (s0 s1 s0' s1': _)
 (E_1': AsimplSubst_ty (sigma) theta_1)
 (E_0: AsimplInst_vl s0 theta_0 s0')
 (E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TSelA s0 s1) sigma (TSelA s0' s1').
-Proof. hnf; cbn. rewrite <- E_0, <- E_1. f_equal; auto. Qed.
-
+Admitted.
 Instance asimplInst_TBind (s0 s0': _)
 (sigma theta_0: subst_of subst_of_ty)
 (E_0': AsimplSubst_ty ((up_ty_vl sigma)) theta_0)
 (E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_ty (TBind s0) sigma (TBind s0').
-Proof. hnf; cbn. rewrite <- E_0. f_equal; auto. Qed.
-
+Admitted.
 Instance asimplInst_TSBind (s0 s1 s0' s1': _)
 (sigma theta_0 theta_1: subst_of subst_of_ty)
 (E_0': AsimplSubst_ty (sigma) theta_0)
 (E_1': AsimplSubst_ty ((up_ty_vl sigma)) theta_1)
 (E_0: AsimplInst_ty s0 theta_0 s0')
 (E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TSBind s0 s1) sigma (TSBind s0' s1').
-Proof. hnf; cbn. rewrite <- E_0, <- E_1. f_equal; auto. Qed.
+Admitted.
 
 Instance AsimplId_ty (s: ty) : AsimplInst_ty s var_vl s.
 Proof. apply id_ty; reflexivity. Qed.
@@ -839,28 +833,24 @@ Instance AsimplInstInst_ty (s t: ty)
 (E1: AsimplSubst_ty sigma sigma')
 (E2: AsimplComp_ty sigma' tau sigma_tau)
 (E3: AsimplInst_ty s sigma_tau t) : AsimplInst_ty (subst_ty sigma s) tau t.
-Proof. 
-       rewrite <- E3. apply compTrans_subst_subst_ty; intros.
-       rewrite E1. apply E2.
-Qed.
+Admitted.
 
 Instance AsimplSubstRefl_ty (sigma: subst_of subst_of_ty) : AsimplSubst_ty sigma sigma | 100.
-Proof. intro. reflexivity. Qed.
+Admitted.
 
 Instance AsimplSubstComp_ty (sigma sigma' tau tau' theta: subst_of subst_of_ty)
 (E_sigma: AsimplSubst_ty sigma sigma')
 (E_tau: AsimplSubst_ty tau tau')
 (E: AsimplComp_ty sigma' tau' theta) : AsimplSubst_ty (comp_ty sigma tau) theta |90.
-Proof.
-  intros x. rewrite <- E. unfold comp_ty.
-  rewrite E_sigma. auto.
-Qed. 
+Admitted.
 
 Instance AsimplSubstCongr_ty (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_ty sigma_vl tau_vl |95.
 Proof. repeat split; assumption. Qed.
 
 Instance AsimplCompRefl_ty (sigma tau: subst_of subst_of_ty) : AsimplComp_ty sigma tau (comp_ty sigma tau) | 100.
-Proof. intro. reflexivity. Qed. 
+Admitted.
+
+
 
 Instance AsimplCompIdR_ty (sigma: index -> ty) : AsimplComp sigma (subst_ty var_vl) sigma.
 Proof. intros x. apply id_ty; reflexivity. Qed.
@@ -868,30 +858,21 @@ Proof. intros x. apply id_ty; reflexivity. Qed.
 Instance AsimplCompAsso_ty (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_ty)
 (E: AsimplComp_ty tau theta tau_theta)
 (E': AsimplComp_ty sigma tau_theta sigma_tau_theta) : AsimplComp_ty (comp_ty sigma tau) theta sigma_tau_theta.
-Proof. intro. rewrite <- E'. unfold comp_ty. erewrite compTrans_subst_subst_vl; auto. Qed.
+Admitted.
 
 Instance AsimplCompCongr_ty (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_ty)
 (E_vl: AsimplSubst_vl ((cast_ty_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_ty sigma_vl tau theta_vl.
-Proof.
-  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption. 
-Qed. 
+Admitted.
 
 Instance AsimplCompCongr'_ty (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_ty)
 (E_vl: AsimplSubst_vl ((cast_ty_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_ty sigma_vl) (subst_ty tau) (subst_ty theta_vl).
-Proof.
-  intros s. simpl.
-  erewrite AsimplInstInst_ty.
-  - reflexivity.
-  - intro. reflexivity.
-  - intro. rewrite <- E_vl'. apply subst_eq_vl. assumption.  
-  - reflexivity. 
-Qed. 
+Admitted.
 
 Instance AsimplRefl_ty (s: ty) : Asimpl s s | 100.
 Proof. reflexivity. Qed.
@@ -904,60 +885,9 @@ Instance AsimplGenComp_ty (sigma sigma': index -> ty)
 (E'': AsimplComp sigma' (subst_ty tau') theta) : AsimplGen (sigma >>> (subst_ty tau) ) theta.
 Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_ty . Qed.
 
-Lemma up_ren_up (xi : ren) (sigma : index -> vl) (E : (xi >>> var_vl) == sigma) :
-  (upren_vl_vl xi >>> var_vl) == up_vl_vl sigma. 
-Proof.
-  intros [|x].
-  - reflexivity.
-  - simpl. unfold compren_vl. rewrite <- E. reflexivity.
-Qed.
-  
-Hint Resolve up_ren_up.
-
-(* *Statement* and proof written by hand! *)
-(* Lemma ren_inst_ty_vl (xi : ren) (sigma : index -> vl) (s : ty) (E : (xi >>> var_vl) == sigma) : *)
-(*   ren_ty xi s = s.[sigma]. *)
-Fixpoint ren_inst_vl_vl (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : vl) :
-  ren_vl xi s = s.[sigma]
-with ren_inst_vl_tm (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : tm):
-  ren_tm xi s = s.[sigma]
-with ren_inst_vl_ty (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : ty):
-  ren_ty xi s = s.[sigma].
-Proof.
-  (* - induction s; cbn; f_equal; try assumption. *)
-  (*   + apply E. *)
-  (*   + erewrite ren_inst_vl_tm with (sigma := up_vl_vl sigma); eauto. *)
-  (*     (* * *) *)
-  (*     (*   unfold castren_vl_tm. *) *)
-  (*     (*   intro. Check up_ren_up. *) *)
-  (*     (*   auto. intro. cbn. *) *)
-  (*     (*   (* unfold upren_vl_vl. *) *) *)
-
-  (*     (*   apply up_ren_up. assumption. *) *)
-  (*   + erewrite ren_inst_vl_tm with (sigma := up_vl_vl sigma); eauto. *)
-  (*     (* * cbn. unfold cast_vl_tm. reflexivity. *) *)
-  (*     (* * apply up_ren_up. assumption. *) *)
-  (*   + apply ren_inst_vl_ty. assumption. *)
-  (*   + apply ren_inst_vl_tm. assumption. *)
-
-  (* - induction s; cbn; f_equal; eauto. *)
-  (* - induction s; cbn; f_equal; eauto. *)
-
-  (* Beware: using eauto in a fixpoint is dangerous, but we use it *after* f_equal. *)
-  all: induction s; cbn; f_equal; eauto using up_ren_up.
-Qed.
-
 Instance AsimplSubstUp_ty_vl (sigma_vl tau_vl: index -> vl)
 (E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_ty_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_ty (up_ty_vl sigma_vl) tau_vl.
-Proof.
-  hnf.
-  unfold up_ty_vl. intros x. rewrite <- E_vl.
-  simpl. destruct x.
-  - reflexivity.
-  - simpl. unfold compren_ty.
-    erewrite ren_inst_vl_vl; reflexivity.
-Qed.
-
+Admitted.
 
 
 
