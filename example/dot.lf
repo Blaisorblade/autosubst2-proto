@@ -1,0 +1,19 @@
+ty: Type
+tm: Type
+vl: Type
+
+TNat: ty
+TAll: ty -> (vl -> ty) -> ty
+TSel: vl -> ty
+TSelA : vl -> ty -> ty
+TBind : (vl -> ty) -> ty
+TSBind: ty -> (vl -> ty) -> ty
+
+tapp: tm -> tm -> tm
+tlet : tm -> (vl -> tm) -> tm
+tproj : tm -> tm
+vt: vl -> tm
+
+vabs: (vl -> tm) -> vl
+vrec: (vl -> tm) -> vl
+vpack : ty -> tm -> vl
