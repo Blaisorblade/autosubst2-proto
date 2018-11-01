@@ -247,7 +247,7 @@ Fixpoint ren_tm (xi: ren_of subst_of_tm) (s: tm) : tm :=
   match s with
   | var_vl x => var_vl ((toVarRen_vl xi) x)
   | vabs s0 => vabs ((ren_tm (upren_vl_vl (castren_vl_tm xi)) s0))
-  | vobj s0 => vobj ((ren_dms (castren_vl_dms xi) s0))
+  | vobj s0 => vobj ((ren_dms (upren_vl_vl (castren_vl_dms xi)) s0))
   end
  with ren_dms (xi: ren_of subst_of_dms) (s: dms) : dms :=
   match s with
@@ -434,7 +434,7 @@ Fixpoint subst_tm (sigma: subst_of subst_of_tm) (s: tm) : tm :=
   match s with
   | var_vl x =>  ((toVar_vl sigma) x)
   | vabs s0 => vabs ((subst_tm (up_vl_vl (cast_vl_tm sigma)) s0))
-  | vobj s0 => vobj ((subst_dms (cast_vl_dms sigma) s0))
+  | vobj s0 => vobj ((subst_dms (up_vl_vl (cast_vl_dms sigma)) s0))
   end
  with subst_dms (sigma: subst_of subst_of_dms) (s: dms) : dms :=
   match s with
@@ -572,7 +572,9 @@ Fixpoint id_tm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: tm) : subs
   | vabs s0 => ap vabs (match upId_tm_vl _ E_vl with
       | E_vl => id_tm _ E_vl s0
       end)
-  | vobj s0 => ap vobj (id_dms _ E_vl s0)
+  | vobj s0 => ap vobj (match upId_dms_vl _ E_vl with
+      | E_vl => id_dms _ E_vl s0
+      end)
   end
  with id_dms (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: dms) : subst_dms sigma_vl s = s :=
   match s with
@@ -645,7 +647,7 @@ Fixpoint compTrans_ren_ren_tm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_v
   match s with
   | var_vl n => ap var_vl (E_vl n)
   | vabs s0 => ap vabs (compTrans_ren_ren_tm (up_ren xi_vl) (up_ren zeta_vl) (up_ren theta_vl) (up_ren_ren xi_vl zeta_vl theta_vl E_vl) s0)
-  | vobj s0 => ap vobj (compTrans_ren_ren_dms xi_vl zeta_vl theta_vl E_vl s0)
+  | vobj s0 => ap vobj (compTrans_ren_ren_dms (up_ren xi_vl) (up_ren zeta_vl) (up_ren theta_vl) (up_ren_ren xi_vl zeta_vl theta_vl E_vl) s0)
   end
  with compTrans_ren_ren_dms (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: dms)
         : ren_dms zeta_vl (ren_dms xi_vl s) = ren_dms theta_vl s :=
@@ -759,7 +761,9 @@ Fixpoint compTrans_ren_subst_tm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_v
   | vabs s0 => ap vabs (match up_ren_subst_vl_vl xi_vl tau_vl theta_vl E_vl with
       | E_vl => compTrans_ren_subst_tm (up_ren xi_vl) _ _ E_vl s0
       end)
-  | vobj s0 => ap vobj (compTrans_ren_subst_dms xi_vl _ _ E_vl s0)
+  | vobj s0 => ap vobj (match up_ren_subst_vl_vl xi_vl tau_vl theta_vl E_vl with
+      | E_vl => compTrans_ren_subst_dms (up_ren xi_vl) _ _ E_vl s0
+      end)
   end
  with compTrans_ren_subst_dms (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: dms)
         : subst_dms tau_vl (ren_dms xi_vl s) = subst_dms theta_vl s :=
@@ -904,7 +908,9 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
   | vabs s0 => ap vabs (match up_subst_ren_vl_vl sigma_vl zeta_vl theta_vl E_vl with
       | E_vl => compTrans_subst_ren_tm _ (up_ren zeta_vl) _ E_vl s0
       end)
-  | vobj s0 => ap vobj (compTrans_subst_ren_dms _ zeta_vl _ E_vl s0)
+  | vobj s0 => ap vobj (match up_subst_ren_vl_vl sigma_vl zeta_vl theta_vl E_vl with
+      | E_vl => compTrans_subst_ren_dms _ (up_ren zeta_vl) _ E_vl s0
+      end)
   end
  with compTrans_subst_ren_dms (sigma_vl: index -> vl)
         (zeta_vl: ren)
@@ -1038,7 +1044,9 @@ Fixpoint compTrans_subst_subst_tm (sigma_vl tau_vl theta_vl: index -> vl)
   | vabs s0 => ap vabs (match up_subst_subst_vl_vl sigma_vl tau_vl theta_vl E_vl with
       | E_vl => compTrans_subst_subst_tm _ _ _ E_vl s0
       end)
-  | vobj s0 => ap vobj (compTrans_subst_subst_dms _ _ _ E_vl s0)
+  | vobj s0 => ap vobj (match up_subst_subst_vl_vl sigma_vl tau_vl theta_vl E_vl with
+      | E_vl => compTrans_subst_subst_dms _ _ _ E_vl s0
+      end)
   end
  with compTrans_subst_subst_dms (sigma_vl tau_vl theta_vl: index -> vl)
         (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl)
@@ -1138,7 +1146,7 @@ Fixpoint subst_eq_tm {sigma tau: subst_of subst_of_tm} (E: eq_of_subst sigma tau
   match s with
   | var_vl n => eq_toVar_vl E n
   | vabs s0 => congr_vabs (subst_eq_tm (eq_up_tm_vl (eq_cast_vl_tm E)) s0)
-  | vobj s0 => congr_vobj (subst_eq_dms (eq_cast_vl_dms E) s0)
+  | vobj s0 => congr_vobj (subst_eq_dms (eq_up_dms_vl (eq_cast_vl_dms E)) s0)
   end
  with subst_eq_dms {sigma tau: subst_of subst_of_dms} (E: eq_of_subst sigma tau) (s: dms) : subst_dms sigma s = subst_dms tau s :=
   match s with
@@ -1372,7 +1380,7 @@ Admitted.
 Instance asimplInst_vobj (s0 s0': _)
 (sigma: subst_of subst_of_vl)
 (theta_0: subst_of subst_of_dms)
-(E_0': AsimplSubst_dms (((cast_vl_dms sigma))) theta_0)
+(E_0': AsimplSubst_dms ((up_vl_vl ((cast_vl_dms sigma)))) theta_0)
 (E_0: AsimplInst_dms s0 theta_0 s0') : AsimplInst_vl (vobj s0) sigma (vobj s0').
 Admitted.
 

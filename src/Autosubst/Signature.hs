@@ -82,7 +82,7 @@ buildSignature (canonicalOrder, spec) =
   let
     (g, keyMap, lookUp) = directContainment spec
     sorted   = topologicalSort g canonicalOrder keyMap
-    analysis = binderAnalysis spec $ hasEdge g lookUp
+    analysis = binderAnalysis spec $ hasEdge (trCl g) lookUp
   in
     case analysis of
       Right set ->

@@ -8,7 +8,7 @@ strict digraph {
                                                                     <TR><TD ALIGN="RIGHT">tproj</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">tm → label → tm</TD></TR></TABLE>>];
         vl [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">open </FONT><FONT COLOR="white">vl</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
                                                                     <TR><TD ALIGN="RIGHT">vabs</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">(vl → tm) → vl</TD></TR>
-                                                                    <TR><TD ALIGN="RIGHT">vobj</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dms → vl</TD></TR></TABLE>>];
+                                                                    <TR><TD ALIGN="RIGHT">vobj</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">(vl → dms) → vl</TD></TR></TABLE>>];
         dms [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">dms</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
                                                                      <TR><TD ALIGN="RIGHT">dnil</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dms</TD></TR>
                                                                      <TR><TD ALIGN="RIGHT">dcons</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dm → dms → dms</TD></TR></TABLE>>];

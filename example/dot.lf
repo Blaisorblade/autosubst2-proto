@@ -6,7 +6,7 @@ label: Type
 gname: Type
 
 vabs: (vl -> tm) -> vl
-vobj : dms -> vl
+vobj : (vl -> dms) -> vl
 
 tv: vl -> tm
 tapp: tm -> tm -> tm
