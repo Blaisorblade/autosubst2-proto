@@ -1,0 +1,52 @@
+strict digraph {
+    node [shape=plaintext
+         ,fontsize=8];
+    subgraph cluster {
+        tm [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">tm</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">tv</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">vl → tm</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">tapp</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">tm → tm → tm</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">tproj</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">tm → label → tm</TD></TR></TABLE>>];
+        vl [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">open </FONT><FONT COLOR="white">vl</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">vabs</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">(vl → tm) → vl</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">vobj</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dms → vl</TD></TR></TABLE>>];
+        dms [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">dms</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
+                                                                     <TR><TD ALIGN="RIGHT">dnil</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dms</TD></TR>
+                                                                     <TR><TD ALIGN="RIGHT">dcons</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dm → dms → dms</TD></TR></TABLE>>];
+        dm [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">dm</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">dty</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → gname → dm</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">dvl</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">vl → dm</TD></TR></TABLE>>];
+        ty [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">ty</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TTop</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TBot</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TAnd</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → ty → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TOr</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → ty → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TLater</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TAll</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → (vl → ty) → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TBind</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">(vl → ty) → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TVMem</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">label → ty → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TTMem</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">label → ty → ty → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TSel</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">vl → ty</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">TSelA</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">vl → ty → ty → ty</TD></TR></TABLE>>];
+        tm -> vl;
+        tm -> tm;
+        tm -> label;
+        vl -> tm;
+        vl -> dms;
+        dms -> dm;
+        dms -> dms;
+        dm -> ty;
+        dm -> gname;
+        dm -> vl;
+        ty -> ty;
+        ty -> label;
+        ty -> vl;
+    }
+    label [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">label</FONT></TD></TR></TABLE>>];
+    gname [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">gname</FONT></TD></TR></TABLE>>];
+    path [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">path</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
+                                                                  <TR><TD ALIGN="RIGHT">pv</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">vl → path</TD></TR>
+                                                                  <TR><TD ALIGN="RIGHT">pself</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">path → label → path</TD></TR></TABLE>>];
+    path -> vl;
+    path -> path;
+    path -> label;
+}
