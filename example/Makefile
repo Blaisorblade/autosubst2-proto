@@ -12,13 +12,14 @@ endif
 
 .PHONY: coq clean
 
+COQSRC = $(filter-out %_orig.v,$(wildcard *.v))
 coq: Makefile.coq
 	$(E) "  MAKE Makefile.coq"
 	$(Q)$(MAKE) $(MFLAGS) -f Makefile.coq
 
 Makefile.coq: Makefile $(VS)
 	$(E) "  COQ_MAKEFILE Makefile.coq"
-	$(Q)coq_makefile -f _CoqProject *.v -o Makefile.coq
+	$(Q)coq_makefile -f _CoqProject $(COQSRC)  -o Makefile.coq
 
 clean: Makefile.coq
 	$(Q)$(MAKE) $(MFLAGS) -f Makefile.coq clean
