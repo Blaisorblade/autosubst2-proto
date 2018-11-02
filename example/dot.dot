@@ -13,7 +13,8 @@ strict digraph {
                                                                      <TR><TD ALIGN="RIGHT">dnil</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dms</TD></TR>
                                                                      <TR><TD ALIGN="RIGHT">dcons</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">dm → dms → dms</TD></TR></TABLE>>];
         dm [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">dm</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
-                                                                    <TR><TD ALIGN="RIGHT">dty</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → gname → dm</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">dtysyn</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty → dm</TD></TR>
+                                                                    <TR><TD ALIGN="RIGHT">dtysem</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">gname → dm</TD></TR>
                                                                     <TR><TD ALIGN="RIGHT">dvl</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">vl → dm</TD></TR></TABLE>>];
         ty [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1"><TR><TD ALIGN="CENTER" COLSPAN="3" BGCOLOR="black"><FONT COLOR="gray">closed </FONT><FONT COLOR="white">ty</FONT><FONT COLOR="gray">[vl]</FONT></TD></TR>
                                                                     <TR><TD ALIGN="RIGHT">TTop</TD> <TD ALIGN="CENTER">:</TD> <TD ALIGN="LEFT">ty</TD></TR>

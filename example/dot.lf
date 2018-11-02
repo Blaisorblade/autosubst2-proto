@@ -12,7 +12,8 @@ tv: vl -> tm
 tapp: tm -> tm -> tm
 tproj : tm -> label -> tm
 
-dty: ty -> gname -> dm
+dtysyn: ty -> dm
+dtysem: gname -> dm
 dvl: vl -> dm
 
 dnil: dms

@@ -55,16 +55,16 @@ Require Import Lists.List.
 Import ListNotations.
 Set Typeclasses Filtered Unification.
 
-Inductive label  : Type :=
-  .
+Definition label := nat.
 
 
 
 Definition subst_of_label  : list Type :=
   [].
 
-Inductive gname  : Type :=
-  .
+From iris Require Import base_logic.lib.saved_prop.
+
+
 
 
 
@@ -86,7 +86,8 @@ Inductive tm  : Type :=
   | dcons : dm -> dms -> dms
  with dm  : Type :=
 
-  | dty : ty -> gname -> dm
+  | dtysyn : ty -> dm
+  | dtysem : gname -> dm
   | dvl : vl -> dm
  with ty  : Type :=
 
@@ -123,8 +124,11 @@ Definition congr_dnil  : dnil  = dnil  :=
 Definition congr_dcons {s0: dm} {s1: dms} {t0: dm} {t1: dms} (E0: s0 = t0) (E1: s1 = t1) : dcons s0 s1 = dcons t0 t1 :=
   apc (ap dcons E0) (E1).
 
-Definition congr_dty {s0: ty} {s1: gname} {t0: ty} {t1: gname} (E0: s0 = t0) (E1: s1 = t1) : dty s0 s1 = dty t0 t1 :=
-  apc (ap dty E0) (E1).
+Definition congr_dtysyn {s0 t0: ty} (E0: s0 = t0) : dtysyn s0 = dtysyn t0 :=
+  ap dtysyn E0.
+
+Definition congr_dtysem {s0 t0: gname} (E0: s0 = t0) : dtysem s0 = dtysem t0 :=
+  ap dtysem E0.
 
 Definition congr_dvl {s0 t0: vl} (E0: s0 = t0) : dvl s0 = dvl t0 :=
   ap dvl E0.
@@ -260,7 +264,8 @@ Fixpoint ren_tm (xi: ren_of subst_of_tm) (s: tm) : tm :=
  with ren_dm (xi: ren_of subst_of_dm) (s: dm) : dm :=
   match s with
 
-  | dty s0 s1 => dty ((ren_ty (castren_dm_ty xi) s0)) (s1)
+  | dtysyn s0 => dtysyn ((ren_ty (castren_dm_ty xi) s0))
+  | dtysem s0 => dtysem (s0)
   | dvl s0 => dvl ((ren_vl (castren_dm_vl xi) s0))
   end
  with ren_ty (xi: ren_of subst_of_ty) (s: ty) : ty :=
@@ -448,8 +453,9 @@ Fixpoint subst_tm (sigma: subst_of subst_of_tm) (s: tm) : tm :=
   end
  with subst_dm (sigma: subst_of subst_of_dm) (s: dm) : dm :=
   match s with
-
-  | dty s0 s1 => dty ((subst_ty (cast_dm_ty sigma) s0)) (s1)
+  
+  | dtysyn s0 => dtysyn ((subst_ty (cast_dm_ty sigma) s0))
+  | dtysem s0 => dtysem (s0)
   | dvl s0 => dvl ((subst_vl (cast_dm_vl sigma) s0))
   end
  with subst_ty (sigma: subst_of subst_of_ty) (s: ty) : ty :=
@@ -588,8 +594,9 @@ Fixpoint id_tm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: tm) : subs
   end
  with id_dm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: dm) : subst_dm sigma_vl s = s :=
   match s with
-
-  | dty s0 s1 => apc (ap dty (id_ty _ E_vl s0)) ((eq_refl))
+  
+  | dtysyn s0 => ap dtysyn (id_ty _ E_vl s0)
+  | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (id_vl _ E_vl s0)
   end
  with id_ty (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: ty) : subst_ty sigma_vl s = s :=
@@ -664,8 +671,9 @@ Fixpoint compTrans_ren_ren_tm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_v
  with compTrans_ren_ren_dm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: dm)
         : ren_dm zeta_vl (ren_dm xi_vl s) = ren_dm theta_vl s :=
   match s with
-
-  | dty s0 s1 => apc (ap dty (compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s0)) ((eq_refl))
+  
+  | dtysyn s0 => ap dtysyn (compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s0)
+  | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)
   end
  with compTrans_ren_ren_ty (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: ty)
@@ -779,8 +787,9 @@ Fixpoint compTrans_ren_subst_tm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_v
  with compTrans_ren_subst_dm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: dm)
         : subst_dm tau_vl (ren_dm xi_vl s) = subst_dm theta_vl s :=
   match s with
-
-  | dty s0 s1 => apc (ap dty (compTrans_ren_subst_ty xi_vl _ _ E_vl s0)) ((eq_refl))
+  
+  | dtysyn s0 => ap dtysyn (compTrans_ren_subst_ty xi_vl _ _ E_vl s0)
+  | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)
   end
  with compTrans_ren_subst_ty (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: ty)
@@ -932,8 +941,9 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
         (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
         (s: dm) : ren_dm zeta_vl (subst_dm sigma_vl s) = subst_dm theta_vl s :=
   match s with
-
-  | dty s0 s1 => apc (ap dty (compTrans_subst_ren_ty _ zeta_vl _ E_vl s0)) ((eq_refl))
+  
+  | dtysyn s0 => ap dtysyn (compTrans_subst_ren_ty _ zeta_vl _ E_vl s0)
+  | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)
   end
  with compTrans_subst_ren_ty (sigma_vl: index -> vl)
@@ -1063,8 +1073,9 @@ Fixpoint compTrans_subst_subst_tm (sigma_vl tau_vl theta_vl: index -> vl)
  with compTrans_subst_subst_dm (sigma_vl tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl) (s: dm)
         : subst_dm tau_vl (subst_dm sigma_vl s) = subst_dm theta_vl s :=
   match s with
-
-  | dty s0 s1 => apc (ap dty (compTrans_subst_subst_ty _ _ _ E_vl s0)) ((eq_refl))
+  
+  | dtysyn s0 => ap dtysyn (compTrans_subst_subst_ty _ _ _ E_vl s0)
+  | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_subst_subst_vl _ _ _ E_vl s0)
   end
  with compTrans_subst_subst_ty (sigma_vl tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl) (s: ty)
@@ -1160,8 +1171,9 @@ Fixpoint subst_eq_tm {sigma tau: subst_of subst_of_tm} (E: eq_of_subst sigma tau
   end
  with subst_eq_dm {sigma tau: subst_of subst_of_dm} (E: eq_of_subst sigma tau) (s: dm) : subst_dm sigma s = subst_dm tau s :=
   match s with
-
-  | dty s0 s1 => congr_dty (subst_eq_ty (eq_cast_dm_ty E) s0) (eq_refl)
+  
+  | dtysyn s0 => congr_dtysyn (subst_eq_ty (eq_cast_dm_ty E) s0)
+  | dtysem s0 => congr_dtysem (eq_refl)
   | dvl s0 => congr_dvl (subst_eq_vl (eq_cast_dm_vl E) s0)
   end
  with subst_eq_ty {sigma tau: subst_of subst_of_ty} (E: eq_of_subst sigma tau) (s: ty) : subst_ty sigma s = subst_ty tau s :=
@@ -1608,14 +1620,17 @@ Proof. reflexivity. Qed.
 
 
 
-Instance asimplInst_dty (s0 s1 s0' s1': _)
+Instance asimplInst_dtysyn (s0 s0': _)
 (sigma: subst_of subst_of_dm)
 (theta_0: subst_of subst_of_ty)
-(theta_1: subst_of subst_of_gname)
 (E_0': AsimplSubst_ty (((cast_dm_ty sigma))) theta_0)
-(* (E_1': AsimplSubst_gname sigma theta_1) *)
-(E_0: AsimplInst_ty s0 theta_0 s0')
-(E_1: AsimplInst_gname s1 theta_1 s1') : AsimplInst_dm (dty s0 s1) sigma (dty s0' s1').
+(E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_dm (dtysyn s0) sigma (dtysyn s0').
+Admitted.
+Instance asimplInst_dtysem (s0 s0': _)
+(sigma: subst_of subst_of_dm)
+(theta_0: subst_of subst_of_gname)
+(* (E_0': AsimplSubst_gname sigma theta_0) *)
+(E_0: AsimplInst_gname s0 theta_0 s0') : AsimplInst_dm (dtysem s0) sigma (dtysem s0').
 Admitted.
 Instance asimplInst_dvl (s0 s0': _)
 (sigma: subst_of subst_of_dm)
