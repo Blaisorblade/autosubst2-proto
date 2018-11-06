@@ -7,21 +7,21 @@ tm : Type
 vl : Type
 dms : Type
 dm : Type
-ty : Type
 path : Type
+ty : Type
 
 The following variable constructors were generated:
 var_vl : Type
 
 Autosubst 2 uses vectors of substitutions. The types of the generated substiutions are listed below:
-subst_of subst_of_label := 
-subst_of subst_of_gname := 
+subst_of subst_of_label :=
+subst_of subst_of_gname :=
 subst_of subst_of_tm := index -> vl
 subst_of subst_of_vl := index -> vl
 subst_of subst_of_dms := index -> vl
 subst_of subst_of_dm := index -> vl
-subst_of subst_of_ty := index -> vl
 subst_of subst_of_path := index -> vl
+subst_of subst_of_ty := index -> vl
 
 Autosubst 2 furthermore generated the following instantiation operations:
 subst_label : subst_of subst_of_label -> label -> label,
@@ -36,9 +36,9 @@ subst_dms : subst_of subst_of_dms -> dms -> dms,
 also accessible as s.[sigma]
 subst_dm : subst_of subst_of_dm -> dm -> dm,
 also accessible as s.[sigma]
-subst_ty : subst_of subst_of_ty -> ty -> ty,
-also accessible as s.[sigma]
 subst_path : subst_of subst_of_path -> path -> path,
+also accessible as s.[sigma]
+subst_ty : subst_of subst_of_ty -> ty -> ty,
 also accessible as s.[sigma]
 
 See the generated dot-graph for further details.
@@ -49,30 +49,33 @@ If Autosubst 2 does not behave as expected, we are grateful for a short mail to 
 Thank you!
 *)
 
-Require Export Autosubst2.
+Require Export Dot.Autosubst2.
 Set Implicit Arguments.
 Require Import Lists.List.
 Import ListNotations.
 Set Typeclasses Filtered Unification.
 
-Inductive label  : Type :=
-  .
+Definition label := nat.
 
 
 
 Definition subst_of_label  : list Type :=
   [].
 
-Inductive gname  : Type :=
-  .
+Module Type type. Parameter gname: Type.
+End type.
+(* For gname. *)
+From stdpp Require Import tactics.
 
+Module Syn (gnameMod: type).
 
+Import gnameMod.
 
 Definition subst_of_gname  : list Type :=
   [].
 
 Inductive tm  : Type :=
-  
+
   | tv : vl -> tm
   | tapp : tm -> tm -> tm
   | tproj : tm -> label -> tm
@@ -81,27 +84,31 @@ Inductive tm  : Type :=
   | vabs : tm -> vl
   | vobj : dms -> vl
  with dms  : Type :=
-  
+
   | dnil :  dms
   | dcons : dm -> dms -> dms
  with dm  : Type :=
-  
+
   | dtysyn : ty -> dm
   | dtysem : gname -> dm
   | dvl : vl -> dm
+ with path  : Type :=
+
+  | pv : vl -> path
+  | pself : path -> label -> path
  with ty  : Type :=
-  
+
   | TTop :  ty
   | TBot :  ty
   | TAnd : ty -> ty -> ty
   | TOr : ty -> ty -> ty
   | TLater : ty -> ty
   | TAll : ty -> ty -> ty
-  | TBind : ty -> ty
+  | TMu : ty -> ty
   | TVMem : label -> ty -> ty
   | TTMem : label -> ty -> ty -> ty
-  | TSel : vl -> ty
-  | TSelA : vl -> ty -> ty -> ty.
+  | TSel : path -> label -> ty
+  | TSelA : path -> label -> ty -> ty -> ty.
 
 Definition congr_tv {s0 t0: vl} (E0: s0 = t0) : tv s0 = tv t0 :=
   ap tv E0.
@@ -133,6 +140,12 @@ Definition congr_dtysem {s0 t0: gname} (E0: s0 = t0) : dtysem s0 = dtysem t0 :=
 Definition congr_dvl {s0 t0: vl} (E0: s0 = t0) : dvl s0 = dvl t0 :=
   ap dvl E0.
 
+Definition congr_pv {s0 t0: vl} (E0: s0 = t0) : pv s0 = pv t0 :=
+  ap pv E0.
+
+Definition congr_pself {s0: path} {s1: label} {t0: path} {t1: label} (E0: s0 = t0) (E1: s1 = t1) : pself s0 s1 = pself t0 t1 :=
+  apc (ap pself E0) (E1).
+
 Definition congr_TTop  : TTop  = TTop  :=
   eq_refl.
 
@@ -151,8 +164,8 @@ Definition congr_TLater {s0 t0: ty} (E0: s0 = t0) : TLater s0 = TLater t0 :=
 Definition congr_TAll {s0 s1 t0 t1: ty} (E0: s0 = t0) (E1: s1 = t1) : TAll s0 s1 = TAll t0 t1 :=
   apc (ap TAll E0) (E1).
 
-Definition congr_TBind {s0 t0: ty} (E0: s0 = t0) : TBind s0 = TBind t0 :=
-  ap TBind E0.
+Definition congr_TMu {s0 t0: ty} (E0: s0 = t0) : TMu s0 = TMu t0 :=
+  ap TMu E0.
 
 Definition congr_TVMem {s0: label} {s1: ty} {t0: label} {t1: ty} (E0: s0 = t0) (E1: s1 = t1) : TVMem s0 s1 = TVMem t0 t1 :=
   apc (ap TVMem E0) (E1).
@@ -161,12 +174,20 @@ Definition congr_TTMem {s0: label} {s1 s2: ty} {t0: label} {t1 t2: ty} (E0: s0 =
   : TTMem s0 s1 s2 = TTMem t0 t1 t2 :=
   apc (apc (ap TTMem E0) (E1)) (E2).
 
-Definition congr_TSel {s0 t0: vl} (E0: s0 = t0) : TSel s0 = TSel t0 :=
-  ap TSel E0.
+Definition congr_TSel {s0: path} {s1: label} {t0: path} {t1: label} (E0: s0 = t0) (E1: s1 = t1) : TSel s0 s1 = TSel t0 t1 :=
+  apc (ap TSel E0) (E1).
 
-Definition congr_TSelA {s0: vl} {s1 s2: ty} {t0: vl} {t1 t2: ty} (E0: s0 = t0) (E1: s1 = t1) (E2: s2 = t2)
-  : TSelA s0 s1 s2 = TSelA t0 t1 t2 :=
-  apc (apc (ap TSelA E0) (E1)) (E2).
+Definition congr_TSelA {s0: path}
+  {s1: label}
+  {s2 s3: ty}
+  {t0: path}
+  {t1: label}
+  {t2 t3: ty}
+  (E0: s0 = t0)
+  (E1: s1 = t1)
+  (E2: s2 = t2)
+  (E3: s3 = t3) : TSelA s0 s1 s2 s3 = TSelA t0 t1 t2 t3 :=
+  apc (apc (apc (ap TSelA E0) (E1)) (E2)) (E3).
 
 Definition subst_of_tm  : list Type :=
   [vl: Type].
@@ -178,6 +199,9 @@ Definition subst_of_dms  : list Type :=
   [vl: Type].
 
 Definition subst_of_dm  : list Type :=
+  [vl: Type].
+
+Definition subst_of_path  : list Type :=
   [vl: Type].
 
 Definition subst_of_ty  : list Type :=
@@ -193,6 +217,9 @@ Definition toVarRen_dms (xi: ren_of subst_of_dms) : _ :=
   let _ := xi in xi.
 
 Definition toVarRen_dm (xi: ren_of subst_of_dm) : _ :=
+  let _ := xi in xi.
+
+Definition toVarRen_path (xi: ren_of subst_of_path) : _ :=
   let _ := xi in xi.
 
 Definition toVarRen_ty (xi: ren_of subst_of_ty) : _ :=
@@ -220,9 +247,16 @@ Definition castren_dm_ty (xi: ren_of subst_of_dm) : ren_of subst_of_ty :=
 Definition castren_dm_vl (xi: ren_of subst_of_dm) : ren_of subst_of_vl :=
   let xi_vl := xi in xi_vl.
 
-
+Definition castren_dms_vl (xi: ren_of subst_of_dms) : ren_of subst_of_vl :=
+  let xi_vl := xi in xi_vl.
 
 Definition castren_ty_vl (xi: ren_of subst_of_ty) : ren_of subst_of_vl :=
+  let xi_vl := xi in xi_vl.
+
+Definition castren_path_vl (xi: ren_of subst_of_path) : ren_of subst_of_vl :=
+  let xi_vl := xi in xi_vl.
+
+Definition castren_ty_path (xi: ren_of subst_of_ty) : ren_of subst_of_path :=
   let xi_vl := xi in xi_vl.
 
 Definition upren_tm_vl (xi: ren_of subst_of_tm) : ren_of subst_of_tm :=
@@ -237,12 +271,15 @@ Definition upren_dms_vl (xi: ren_of subst_of_dms) : ren_of subst_of_dms :=
 Definition upren_dm_vl (xi: ren_of subst_of_dm) : ren_of subst_of_dm :=
   let xi_vl := xi in up_ren xi_vl.
 
+Definition upren_path_vl (xi: ren_of subst_of_path) : ren_of subst_of_path :=
+  let xi_vl := xi in up_ren xi_vl.
+
 Definition upren_ty_vl (xi: ren_of subst_of_ty) : ren_of subst_of_ty :=
   let xi_vl := xi in up_ren xi_vl.
 
 Fixpoint ren_tm (xi: ren_of subst_of_tm) (s: tm) : tm :=
   match s with
-  
+
   | tv s0 => tv ((ren_vl (castren_tm_vl xi) s0))
   | tapp s0 s1 => tapp ((ren_tm xi s0)) ((ren_tm xi s1))
   | tproj s0 s1 => tproj ((ren_tm xi s0)) (s1)
@@ -255,31 +292,37 @@ Fixpoint ren_tm (xi: ren_of subst_of_tm) (s: tm) : tm :=
   end
  with ren_dms (xi: ren_of subst_of_dms) (s: dms) : dms :=
   match s with
-  
-  | dnil  => dnil 
+
+  | dnil  => dnil
   | dcons s0 s1 => dcons ((ren_dm (castren_dms_dm xi) s0)) ((ren_dms xi s1))
   end
  with ren_dm (xi: ren_of subst_of_dm) (s: dm) : dm :=
   match s with
-  
+
   | dtysyn s0 => dtysyn ((ren_ty (castren_dm_ty xi) s0))
   | dtysem s0 => dtysem (s0)
   | dvl s0 => dvl ((ren_vl (castren_dm_vl xi) s0))
   end
+ with ren_path (xi: ren_of subst_of_path) (s: path) : path :=
+  match s with
+
+  | pv s0 => pv ((ren_vl (castren_path_vl xi) s0))
+  | pself s0 s1 => pself ((ren_path xi s0)) (s1)
+  end
  with ren_ty (xi: ren_of subst_of_ty) (s: ty) : ty :=
   match s with
-  
-  | TTop  => TTop 
-  | TBot  => TBot 
+
+  | TTop  => TTop
+  | TBot  => TBot
   | TAnd s0 s1 => TAnd ((ren_ty xi s0)) ((ren_ty xi s1))
   | TOr s0 s1 => TOr ((ren_ty xi s0)) ((ren_ty xi s1))
   | TLater s0 => TLater ((ren_ty xi s0))
   | TAll s0 s1 => TAll ((ren_ty xi s0)) ((ren_ty (upren_ty_vl xi) s1))
-  | TBind s0 => TBind ((ren_ty (upren_ty_vl xi) s0))
+  | TMu s0 => TMu ((ren_ty (upren_ty_vl xi) s0))
   | TVMem s0 s1 => TVMem (s0) ((ren_ty xi s1))
   | TTMem s0 s1 s2 => TTMem (s0) ((ren_ty xi s1)) ((ren_ty xi s2))
-  | TSel s0 => TSel ((ren_vl (castren_ty_vl xi) s0))
-  | TSelA s0 s1 s2 => TSelA ((ren_vl (castren_ty_vl xi) s0)) ((ren_ty xi s1)) ((ren_ty xi s2))
+  | TSel s0 s1 => TSel ((ren_path (castren_ty_path xi) s0)) (s1)
+  | TSelA s0 s1 s2 s3 => TSelA ((ren_path (castren_ty_path xi) s0)) (s1) ((ren_ty xi s2)) ((ren_ty xi s3))
   end.
 
 Definition toVar_tm (sigma: subst_of subst_of_tm) : _ :=
@@ -294,6 +337,9 @@ Definition toVar_dms (sigma: subst_of subst_of_dms) : _ :=
 Definition toVar_dm (sigma: subst_of subst_of_dm) : _ :=
   let _ := sigma in sigma.
 
+Definition toVar_path (sigma: subst_of subst_of_path) : _ :=
+  let _ := sigma in sigma.
+
 Definition toVar_ty (sigma: subst_of subst_of_ty) : _ :=
   let _ := sigma in sigma.
 
@@ -303,6 +349,8 @@ Definition eq_toVar_vl {sigma tau: subst_of subst_of_vl} (E: eq_of_subst sigma t
   rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
   exact (E_vl n).
 Defined.
+
+
 
 
 
@@ -330,6 +378,11 @@ Definition compren_dm (sigma: subst_of subst_of_dm) (xi: ren_of subst_of_dm) : s
   | sigma_vl => fun x => ren_vl (castren_dm_vl xi) (sigma_vl x)
   end.
 
+Definition compren_path (sigma: subst_of subst_of_path) (xi: ren_of subst_of_path) : subst_of subst_of_path :=
+  match sigma with
+  | sigma_vl => fun x => ren_vl (castren_path_vl xi) (sigma_vl x)
+  end.
+
 Definition compren_ty (sigma: subst_of subst_of_ty) (xi: ren_of subst_of_ty) : subst_of subst_of_ty :=
   match sigma with
   | sigma_vl => fun x => ren_vl (castren_ty_vl xi) (sigma_vl x)
@@ -352,6 +405,11 @@ Definition up_dms_vl (sigma: subst_of subst_of_dms) : subst_of subst_of_dms :=
 
 Definition up_dm_vl (sigma: subst_of subst_of_dm) : subst_of subst_of_dm :=
   match compren_dm sigma S with
+  | sigma_vl => scons (var_vl 0) sigma_vl
+  end.
+
+Definition up_path_vl (sigma: subst_of subst_of_path) : subst_of subst_of_path :=
+  match compren_path sigma S with
   | sigma_vl => scons (var_vl 0) sigma_vl
   end.
 
@@ -382,7 +440,17 @@ Definition cast_dm_ty (sigma: subst_of subst_of_dm) : subst_of subst_of_ty :=
 Definition cast_dm_vl (sigma: subst_of subst_of_dm) : subst_of subst_of_vl :=
   let sigma_vl := sigma in sigma_vl.
 
+Definition cast_path_vl (sigma: subst_of subst_of_path) : subst_of subst_of_vl :=
+  let sigma_vl := sigma in sigma_vl.
 
+Definition cast_dms_vl (sigma: subst_of subst_of_dms) : subst_of subst_of_vl :=
+  let sigma_vl := sigma in sigma_vl.
+
+
+
+
+Definition cast_ty_path (sigma: subst_of subst_of_ty) : subst_of subst_of_path :=
+  let sigma_vl := sigma in sigma_vl.
 
 Definition cast_ty_vl (sigma: subst_of subst_of_ty) : subst_of subst_of_vl :=
   let sigma_vl := sigma in sigma_vl.
@@ -421,16 +489,25 @@ Definition eq_cast_dm_vl {sigma tau: subst_of subst_of_dm} (E: eq_of_subst sigma
   exact (E_vl).
 Defined.
 
+Definition eq_cast_path_vl {sigma tau: subst_of subst_of_path} (E: eq_of_subst sigma tau)
+  : eq_of_subst (cast_path_vl sigma) (cast_path_vl tau).
+  rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
+  exact (E_vl).
+Defined.
 
 
-Definition eq_cast_ty_vl {sigma tau: subst_of subst_of_ty} (E: eq_of_subst sigma tau) : eq_of_subst (cast_ty_vl sigma) (cast_ty_vl tau).
+
+
+
+Definition eq_cast_ty_path {sigma tau: subst_of subst_of_ty} (E: eq_of_subst sigma tau)
+  : eq_of_subst (cast_ty_path sigma) (cast_ty_path tau).
   rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
   exact (E_vl).
 Defined.
 
 Fixpoint subst_tm (sigma: subst_of subst_of_tm) (s: tm) : tm :=
   match s with
-  
+
   | tv s0 => tv ((subst_vl (cast_tm_vl sigma) s0))
   | tapp s0 s1 => tapp ((subst_tm sigma s0)) ((subst_tm sigma s1))
   | tproj s0 s1 => tproj ((subst_tm sigma s0)) (s1)
@@ -443,31 +520,37 @@ Fixpoint subst_tm (sigma: subst_of subst_of_tm) (s: tm) : tm :=
   end
  with subst_dms (sigma: subst_of subst_of_dms) (s: dms) : dms :=
   match s with
-  
-  | dnil  => dnil 
+
+  | dnil  => dnil
   | dcons s0 s1 => dcons ((subst_dm (cast_dms_dm sigma) s0)) ((subst_dms sigma s1))
   end
  with subst_dm (sigma: subst_of subst_of_dm) (s: dm) : dm :=
   match s with
-  
+
   | dtysyn s0 => dtysyn ((subst_ty (cast_dm_ty sigma) s0))
   | dtysem s0 => dtysem (s0)
   | dvl s0 => dvl ((subst_vl (cast_dm_vl sigma) s0))
   end
+ with subst_path (sigma: subst_of subst_of_path) (s: path) : path :=
+  match s with
+
+  | pv s0 => pv ((subst_vl (cast_path_vl sigma) s0))
+  | pself s0 s1 => pself ((subst_path sigma s0)) (s1)
+  end
  with subst_ty (sigma: subst_of subst_of_ty) (s: ty) : ty :=
   match s with
-  
-  | TTop  => TTop 
-  | TBot  => TBot 
+
+  | TTop  => TTop
+  | TBot  => TBot
   | TAnd s0 s1 => TAnd ((subst_ty sigma s0)) ((subst_ty sigma s1))
   | TOr s0 s1 => TOr ((subst_ty sigma s0)) ((subst_ty sigma s1))
   | TLater s0 => TLater ((subst_ty sigma s0))
   | TAll s0 s1 => TAll ((subst_ty sigma s0)) ((subst_ty (up_ty_vl sigma) s1))
-  | TBind s0 => TBind ((subst_ty (up_ty_vl sigma) s0))
+  | TMu s0 => TMu ((subst_ty (up_ty_vl sigma) s0))
   | TVMem s0 s1 => TVMem (s0) ((subst_ty sigma s1))
   | TTMem s0 s1 s2 => TTMem (s0) ((subst_ty sigma s1)) ((subst_ty sigma s2))
-  | TSel s0 => TSel ((subst_vl (cast_ty_vl sigma) s0))
-  | TSelA s0 s1 s2 => TSelA ((subst_vl (cast_ty_vl sigma) s0)) ((subst_ty sigma s1)) ((subst_ty sigma s2))
+  | TSel s0 s1 => TSel ((subst_path (cast_ty_path sigma) s0)) (s1)
+  | TSelA s0 s1 s2 s3 => TSelA ((subst_path (cast_ty_path sigma) s0)) (s1) ((subst_ty sigma s2)) ((subst_ty sigma s3))
   end.
 
 Definition comp_tm (sigma tau: subst_of subst_of_tm) : subst_of subst_of_tm :=
@@ -490,6 +573,11 @@ Definition comp_dm (sigma tau: subst_of subst_of_dm) : subst_of subst_of_dm :=
   | sigma_vl => fun x => subst_vl (cast_dm_vl tau) (sigma_vl x)
   end.
 
+Definition comp_path (sigma tau: subst_of subst_of_path) : subst_of subst_of_path :=
+  match sigma with
+  | sigma_vl => fun x => subst_vl (cast_path_vl tau) (sigma_vl x)
+  end.
+
 Definition comp_ty (sigma tau: subst_of subst_of_ty) : subst_of subst_of_ty :=
   match sigma with
   | sigma_vl => fun x => subst_vl (cast_ty_vl tau) (sigma_vl x)
@@ -507,6 +595,9 @@ Definition substMixin_dms  : substMixin dms :=
 Definition substMixin_dm  : substMixin dm :=
   {|subst_of_substType := subst_of_dm;inst_of_substType := subst_dm|}.
 
+Definition substMixin_path  : substMixin path :=
+  {|subst_of_substType := subst_of_path;inst_of_substType := subst_path|}.
+
 Definition substMixin_ty  : substMixin ty :=
   {|subst_of_substType := subst_of_ty;inst_of_substType := subst_ty|}.
 
@@ -521,6 +612,9 @@ Canonical Structure substType_dms  : substType :=
 
 Canonical Structure substType_dm  : substType :=
   Eval hnf in @Pack dm substMixin_dm dm.
+
+Canonical Structure substType_path  : substType :=
+  Eval hnf in @Pack path substMixin_path path.
 
 Canonical Structure substType_ty  : substType :=
   Eval hnf in @Pack ty substMixin_ty ty.
@@ -557,6 +651,14 @@ Definition upId_dm_vl (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) : @eq_o
   | S n => ap (ren_vl (castren_dm_vl S)) (E_vl n)
   end.
 
+Definition upId_path_vl (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) : @eq_of_subst subst_of_path (up_path_vl sigma_vl) var_vl :=
+  fun n => match n return (match up_path_vl sigma_vl with
+  | tau_vl => tau_vl n = var_vl  n
+  end) with
+  | 0 => eq_refl
+  | S n => ap (ren_vl (castren_path_vl S)) (E_vl n)
+  end.
+
 Definition upId_ty_vl (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) : @eq_of_subst subst_of_ty (up_ty_vl sigma_vl) var_vl :=
   fun n => match n return (match up_ty_vl sigma_vl with
   | tau_vl => tau_vl n = var_vl  n
@@ -567,7 +669,7 @@ Definition upId_ty_vl (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) : @eq_o
 
 Fixpoint id_tm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: tm) : subst_tm sigma_vl s = s :=
   match s with
-  
+
   | tv s0 => ap tv (id_vl _ E_vl s0)
   | tapp s0 s1 => apc (ap tapp (id_tm _ E_vl s0)) ((id_tm _ E_vl s1))
   | tproj s0 s1 => apc (ap tproj (id_tm _ E_vl s0)) ((eq_refl))
@@ -584,20 +686,26 @@ Fixpoint id_tm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: tm) : subs
   end
  with id_dms (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: dms) : subst_dms sigma_vl s = s :=
   match s with
-  
+
   | dnil  => eq_refl
   | dcons s0 s1 => apc (ap dcons (id_dm _ E_vl s0)) ((id_dms _ E_vl s1))
   end
  with id_dm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: dm) : subst_dm sigma_vl s = s :=
   match s with
-  
+
   | dtysyn s0 => ap dtysyn (id_ty _ E_vl s0)
   | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (id_vl _ E_vl s0)
   end
+ with id_path (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: path) : subst_path sigma_vl s = s :=
+  match s with
+
+  | pv s0 => ap pv (id_vl _ E_vl s0)
+  | pself s0 s1 => apc (ap pself (id_path _ E_vl s0)) ((eq_refl))
+  end
  with id_ty (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: ty) : subst_ty sigma_vl s = s :=
   match s with
-  
+
   | TTop  => eq_refl
   | TBot  => eq_refl
   | TAnd s0 s1 => apc (ap TAnd (id_ty _ E_vl s0)) ((id_ty _ E_vl s1))
@@ -606,13 +714,13 @@ Fixpoint id_tm (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: tm) : subs
   | TAll s0 s1 => apc (ap TAll (id_ty _ E_vl s0)) ((match upId_ty_vl _ E_vl with
       | E_vl => id_ty _ E_vl s1
       end))
-  | TBind s0 => ap TBind (match upId_ty_vl _ E_vl with
+  | TMu s0 => ap TMu (match upId_ty_vl _ E_vl with
       | E_vl => id_ty _ E_vl s0
       end)
   | TVMem s0 s1 => apc (ap TVMem (eq_refl)) ((id_ty _ E_vl s1))
   | TTMem s0 s1 s2 => apc (apc (ap TTMem (eq_refl)) ((id_ty _ E_vl s1))) ((id_ty _ E_vl s2))
-  | TSel s0 => ap TSel (id_vl _ E_vl s0)
-  | TSelA s0 s1 s2 => apc (apc (ap TSelA (id_vl _ E_vl s0)) ((id_ty _ E_vl s1))) ((id_ty _ E_vl s2))
+  | TSel s0 s1 => apc (ap TSel (id_path _ E_vl s0)) ((eq_refl))
+  | TSelA s0 s1 s2 s3 => apc (apc (apc (ap TSelA (id_path _ E_vl s0)) ((eq_refl))) ((id_ty _ E_vl s2))) ((id_ty _ E_vl s3))
   end.
 
 Definition toSubst_tm (xi: ren_of subst_of_tm) : subst_of subst_of_tm :=
@@ -635,6 +743,11 @@ Definition toSubst_dm (xi: ren_of subst_of_dm) : subst_of subst_of_dm :=
   | xi_vl => fun x => var_vl (xi_vl x)
   end.
 
+Definition toSubst_path (xi: ren_of subst_of_path) : subst_of subst_of_path :=
+  match xi with
+  | xi_vl => fun x => var_vl (xi_vl x)
+  end.
+
 Definition toSubst_ty (xi: ren_of subst_of_ty) : subst_of subst_of_ty :=
   match xi with
   | xi_vl => fun x => var_vl (xi_vl x)
@@ -643,7 +756,7 @@ Definition toSubst_ty (xi: ren_of subst_of_ty) : subst_of subst_of_ty :=
 Fixpoint compTrans_ren_ren_tm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: tm)
            : ren_tm zeta_vl (ren_tm xi_vl s) = ren_tm theta_vl s :=
   match s with
-  
+
   | tv s0 => ap tv (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)
   | tapp s0 s1 =>
       apc (ap tapp (compTrans_ren_ren_tm xi_vl zeta_vl theta_vl E_vl s0)) ((compTrans_ren_ren_tm xi_vl zeta_vl theta_vl E_vl s1))
@@ -659,7 +772,7 @@ Fixpoint compTrans_ren_ren_tm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_v
  with compTrans_ren_ren_dms (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: dms)
         : ren_dms zeta_vl (ren_dms xi_vl s) = ren_dms theta_vl s :=
   match s with
-  
+
   | dnil  => eq_refl
   | dcons s0 s1 =>
       apc (ap dcons (compTrans_ren_ren_dm xi_vl zeta_vl theta_vl E_vl s0)) ((compTrans_ren_ren_dms xi_vl zeta_vl theta_vl E_vl s1))
@@ -667,15 +780,22 @@ Fixpoint compTrans_ren_ren_tm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_v
  with compTrans_ren_ren_dm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: dm)
         : ren_dm zeta_vl (ren_dm xi_vl s) = ren_dm theta_vl s :=
   match s with
-  
+
   | dtysyn s0 => ap dtysyn (compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s0)
   | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)
   end
+ with compTrans_ren_ren_path (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: path)
+        : ren_path zeta_vl (ren_path xi_vl s) = ren_path theta_vl s :=
+  match s with
+
+  | pv s0 => ap pv (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)
+  | pself s0 s1 => apc (ap pself (compTrans_ren_ren_path xi_vl zeta_vl theta_vl E_vl s0)) ((eq_refl))
+  end
  with compTrans_ren_ren_ty (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: ty)
         : ren_ty zeta_vl (ren_ty xi_vl s) = ren_ty theta_vl s :=
   match s with
-  
+
   | TTop  => eq_refl
   | TBot  => eq_refl
   | TAnd s0 s1 =>
@@ -684,14 +804,13 @@ Fixpoint compTrans_ren_ren_tm (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_v
   | TLater s0 => ap TLater (compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s0)
   | TAll s0 s1 =>
       apc (ap TAll (compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s0)) ((compTrans_ren_ren_ty (up_ren xi_vl) (up_ren zeta_vl) (up_ren theta_vl) (up_ren_ren xi_vl zeta_vl theta_vl E_vl) s1))
-  | TBind s0 =>
-      ap TBind (compTrans_ren_ren_ty (up_ren xi_vl) (up_ren zeta_vl) (up_ren theta_vl) (up_ren_ren xi_vl zeta_vl theta_vl E_vl) s0)
+  | TMu s0 => ap TMu (compTrans_ren_ren_ty (up_ren xi_vl) (up_ren zeta_vl) (up_ren theta_vl) (up_ren_ren xi_vl zeta_vl theta_vl E_vl) s0)
   | TVMem s0 s1 => apc (ap TVMem (eq_refl)) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s1))
   | TTMem s0 s1 s2 =>
       apc (apc (ap TTMem (eq_refl)) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s1))) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s2))
-  | TSel s0 => ap TSel (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)
-  | TSelA s0 s1 s2 =>
-      apc (apc (ap TSelA (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s1))) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s2))
+  | TSel s0 s1 => apc (ap TSel (compTrans_ren_ren_path xi_vl zeta_vl theta_vl E_vl s0)) ((eq_refl))
+  | TSelA s0 s1 s2 s3 =>
+      apc (apc (apc (ap TSelA (compTrans_ren_ren_path xi_vl zeta_vl theta_vl E_vl s0)) ((eq_refl))) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s2))) ((compTrans_ren_ren_ty xi_vl zeta_vl theta_vl E_vl s3))
   end.
 
 Definition compE_ren_ren_tm (xi_vl zeta_vl: ren) (s: tm) : ren_tm zeta_vl (ren_tm xi_vl s) = ren_tm (funcomp xi_vl zeta_vl) s :=
@@ -705,6 +824,9 @@ Definition compE_ren_ren_dms (xi_vl zeta_vl: ren) (s: dms) : ren_dms zeta_vl (re
 
 Definition compE_ren_ren_dm (xi_vl zeta_vl: ren) (s: dm) : ren_dm zeta_vl (ren_dm xi_vl s) = ren_dm (funcomp xi_vl zeta_vl) s :=
   compTrans_ren_ren_dm xi_vl zeta_vl (funcomp xi_vl zeta_vl) (fun _ => eq_refl) s.
+
+Definition compE_ren_ren_path (xi_vl zeta_vl: ren) (s: path) : ren_path zeta_vl (ren_path xi_vl s) = ren_path (funcomp xi_vl zeta_vl) s :=
+  compTrans_ren_ren_path xi_vl zeta_vl (funcomp xi_vl zeta_vl) (fun _ => eq_refl) s.
 
 Definition compE_ren_ren_ty (xi_vl zeta_vl: ren) (s: ty) : ren_ty zeta_vl (ren_ty xi_vl s) = ren_ty (funcomp xi_vl zeta_vl) s :=
   compTrans_ren_ren_ty xi_vl zeta_vl (funcomp xi_vl zeta_vl) (fun _ => eq_refl) s.
@@ -745,6 +867,15 @@ Definition up_ren_subst_dm_vl (xi_vl: ren) (theta_vl tau_vl: index -> vl) (E_vl:
   | S n => ap (ren_vl (castren_dm_vl S)) (E_vl n)
   end.
 
+Definition up_ren_subst_path_vl (xi_vl: ren) (theta_vl tau_vl: index -> vl) (E_vl: (fun x =>  theta_vl (xi_vl x)) == tau_vl)
+  : @eq_of_subst subst_of_path (comp_path (toSubst_path (upren_path_vl xi_vl)) (up_path_vl theta_vl)) (up_path_vl tau_vl) :=
+  fun n => match n return match comp_path (toSubst_path (upren_path_vl xi_vl)) (up_path_vl theta_vl), up_path_vl tau_vl with
+  | xi_vl, tau_vl => xi_vl n = tau_vl n
+  end with
+  | 0 => eq_refl
+  | S n => ap (ren_vl (castren_path_vl S)) (E_vl n)
+  end.
+
 Definition up_ren_subst_ty_vl (xi_vl: ren) (theta_vl tau_vl: index -> vl) (E_vl: (fun x =>  theta_vl (xi_vl x)) == tau_vl)
   : @eq_of_subst subst_of_ty (comp_ty (toSubst_ty (upren_ty_vl xi_vl)) (up_ty_vl theta_vl)) (up_ty_vl tau_vl) :=
   fun n => match n return match comp_ty (toSubst_ty (upren_ty_vl xi_vl)) (up_ty_vl theta_vl), up_ty_vl tau_vl with
@@ -757,7 +888,7 @@ Definition up_ren_subst_ty_vl (xi_vl: ren) (theta_vl tau_vl: index -> vl) (E_vl:
 Fixpoint compTrans_ren_subst_tm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: tm)
            : subst_tm tau_vl (ren_tm xi_vl s) = subst_tm theta_vl s :=
   match s with
-  
+
   | tv s0 => ap tv (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)
   | tapp s0 s1 => apc (ap tapp (compTrans_ren_subst_tm xi_vl _ _ E_vl s0)) ((compTrans_ren_subst_tm xi_vl _ _ E_vl s1))
   | tproj s0 s1 => apc (ap tproj (compTrans_ren_subst_tm xi_vl _ _ E_vl s0)) ((eq_refl))
@@ -776,22 +907,29 @@ Fixpoint compTrans_ren_subst_tm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_v
  with compTrans_ren_subst_dms (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: dms)
         : subst_dms tau_vl (ren_dms xi_vl s) = subst_dms theta_vl s :=
   match s with
-  
+
   | dnil  => eq_refl
   | dcons s0 s1 => apc (ap dcons (compTrans_ren_subst_dm xi_vl _ _ E_vl s0)) ((compTrans_ren_subst_dms xi_vl _ _ E_vl s1))
   end
  with compTrans_ren_subst_dm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: dm)
         : subst_dm tau_vl (ren_dm xi_vl s) = subst_dm theta_vl s :=
   match s with
-  
+
   | dtysyn s0 => ap dtysyn (compTrans_ren_subst_ty xi_vl _ _ E_vl s0)
   | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)
   end
+ with compTrans_ren_subst_path (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: path)
+        : subst_path tau_vl (ren_path xi_vl s) = subst_path theta_vl s :=
+  match s with
+
+  | pv s0 => ap pv (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)
+  | pself s0 s1 => apc (ap pself (compTrans_ren_subst_path xi_vl _ _ E_vl s0)) ((eq_refl))
+  end
  with compTrans_ren_subst_ty (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: ty)
         : subst_ty tau_vl (ren_ty xi_vl s) = subst_ty theta_vl s :=
   match s with
-  
+
   | TTop  => eq_refl
   | TBot  => eq_refl
   | TAnd s0 s1 => apc (ap TAnd (compTrans_ren_subst_ty xi_vl _ _ E_vl s0)) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s1))
@@ -800,15 +938,15 @@ Fixpoint compTrans_ren_subst_tm (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_v
   | TAll s0 s1 => apc (ap TAll (compTrans_ren_subst_ty xi_vl _ _ E_vl s0)) ((match up_ren_subst_ty_vl xi_vl tau_vl theta_vl E_vl with
       | E_vl => compTrans_ren_subst_ty (up_ren xi_vl) _ _ E_vl s1
       end))
-  | TBind s0 => ap TBind (match up_ren_subst_ty_vl xi_vl tau_vl theta_vl E_vl with
+  | TMu s0 => ap TMu (match up_ren_subst_ty_vl xi_vl tau_vl theta_vl E_vl with
       | E_vl => compTrans_ren_subst_ty (up_ren xi_vl) _ _ E_vl s0
       end)
   | TVMem s0 s1 => apc (ap TVMem (eq_refl)) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s1))
   | TTMem s0 s1 s2 =>
       apc (apc (ap TTMem (eq_refl)) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s1))) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s2))
-  | TSel s0 => ap TSel (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)
-  | TSelA s0 s1 s2 =>
-      apc (apc (ap TSelA (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s1))) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s2))
+  | TSel s0 s1 => apc (ap TSel (compTrans_ren_subst_path xi_vl _ _ E_vl s0)) ((eq_refl))
+  | TSelA s0 s1 s2 s3 =>
+      apc (apc (apc (ap TSelA (compTrans_ren_subst_path xi_vl _ _ E_vl s0)) ((eq_refl))) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s2))) ((compTrans_ren_subst_ty xi_vl _ _ E_vl s3))
   end.
 
 Definition compE_ren_subst_tm (xi_vl: ren) (tau_vl: index -> vl) (s: tm)
@@ -826,6 +964,10 @@ Definition compE_ren_subst_dms (xi_vl: ren) (tau_vl: index -> vl) (s: dms)
 Definition compE_ren_subst_dm (xi_vl: ren) (tau_vl: index -> vl) (s: dm)
   : subst_dm tau_vl (ren_dm xi_vl s) = subst_dm (funcomp xi_vl tau_vl) s :=
   compTrans_ren_subst_dm xi_vl tau_vl (funcomp xi_vl tau_vl) (fun _ => eq_refl) s.
+
+Definition compE_ren_subst_path (xi_vl: ren) (tau_vl: index -> vl) (s: path)
+  : subst_path tau_vl (ren_path xi_vl s) = subst_path (funcomp xi_vl tau_vl) s :=
+  compTrans_ren_subst_path xi_vl tau_vl (funcomp xi_vl tau_vl) (fun _ => eq_refl) s.
 
 Definition compE_ren_subst_ty (xi_vl: ren) (tau_vl: index -> vl) (s: ty)
   : subst_ty tau_vl (ren_ty xi_vl s) = subst_ty (funcomp xi_vl tau_vl) s :=
@@ -883,6 +1025,19 @@ Definition up_subst_ren_dm_vl (sigma_vl: index -> vl)
       eq_trans (compE_ren_ren_vl S (up_ren rho_vl) (sigma_vl n)) (eq_trans (eq_sym (compE_ren_ren_vl rho_vl S (sigma_vl n))) (ap (ren_vl S) (E_vl n)))
   end.
 
+Definition up_subst_ren_path_vl (sigma_vl: index -> vl)
+  (rho_vl: ren)
+  (tau_vl: index -> vl)
+  (E_vl: (fun x =>  ren_vl rho_vl (sigma_vl x)) == tau_vl)
+  : @eq_of_subst subst_of_path (compren_path (up_path_vl sigma_vl) (upren_path_vl rho_vl)) (up_path_vl tau_vl) :=
+  fun n => match n return match compren_path (up_path_vl sigma_vl) (upren_path_vl rho_vl), up_path_vl tau_vl with
+  | sigma_vl, tau_vl => sigma_vl n = tau_vl n
+  end with
+  | 0 => eq_refl
+  | S n =>
+      eq_trans (compE_ren_ren_vl S (up_ren rho_vl) (sigma_vl n)) (eq_trans (eq_sym (compE_ren_ren_vl rho_vl S (sigma_vl n))) (ap (ren_vl S) (E_vl n)))
+  end.
+
 Definition up_subst_ren_ty_vl (sigma_vl: index -> vl)
   (rho_vl: ren)
   (tau_vl: index -> vl)
@@ -902,7 +1057,7 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
            (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
            (s: tm) : ren_tm zeta_vl (subst_tm sigma_vl s) = subst_tm theta_vl s :=
   match s with
-  
+
   | tv s0 => ap tv (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)
   | tapp s0 s1 => apc (ap tapp (compTrans_subst_ren_tm _ zeta_vl _ E_vl s0)) ((compTrans_subst_ren_tm _ zeta_vl _ E_vl s1))
   | tproj s0 s1 => apc (ap tproj (compTrans_subst_ren_tm _ zeta_vl _ E_vl s0)) ((eq_refl))
@@ -927,7 +1082,7 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
         (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
         (s: dms) : ren_dms zeta_vl (subst_dms sigma_vl s) = subst_dms theta_vl s :=
   match s with
-  
+
   | dnil  => eq_refl
   | dcons s0 s1 => apc (ap dcons (compTrans_subst_ren_dm _ zeta_vl _ E_vl s0)) ((compTrans_subst_ren_dms _ zeta_vl _ E_vl s1))
   end
@@ -937,10 +1092,20 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
         (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
         (s: dm) : ren_dm zeta_vl (subst_dm sigma_vl s) = subst_dm theta_vl s :=
   match s with
-  
+
   | dtysyn s0 => ap dtysyn (compTrans_subst_ren_ty _ zeta_vl _ E_vl s0)
   | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)
+  end
+ with compTrans_subst_ren_path (sigma_vl: index -> vl)
+        (zeta_vl: ren)
+        (theta_vl: index -> vl)
+        (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
+        (s: path) : ren_path zeta_vl (subst_path sigma_vl s) = subst_path theta_vl s :=
+  match s with
+
+  | pv s0 => ap pv (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)
+  | pself s0 s1 => apc (ap pself (compTrans_subst_ren_path _ zeta_vl _ E_vl s0)) ((eq_refl))
   end
  with compTrans_subst_ren_ty (sigma_vl: index -> vl)
         (zeta_vl: ren)
@@ -948,7 +1113,7 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
         (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
         (s: ty) : ren_ty zeta_vl (subst_ty sigma_vl s) = subst_ty theta_vl s :=
   match s with
-  
+
   | TTop  => eq_refl
   | TBot  => eq_refl
   | TAnd s0 s1 => apc (ap TAnd (compTrans_subst_ren_ty _ zeta_vl _ E_vl s0)) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s1))
@@ -957,15 +1122,15 @@ Fixpoint compTrans_subst_ren_tm (sigma_vl: index -> vl)
   | TAll s0 s1 => apc (ap TAll (compTrans_subst_ren_ty _ zeta_vl _ E_vl s0)) ((match up_subst_ren_ty_vl sigma_vl zeta_vl theta_vl E_vl with
       | E_vl => compTrans_subst_ren_ty _ (up_ren zeta_vl) _ E_vl s1
       end))
-  | TBind s0 => ap TBind (match up_subst_ren_ty_vl sigma_vl zeta_vl theta_vl E_vl with
+  | TMu s0 => ap TMu (match up_subst_ren_ty_vl sigma_vl zeta_vl theta_vl E_vl with
       | E_vl => compTrans_subst_ren_ty _ (up_ren zeta_vl) _ E_vl s0
       end)
   | TVMem s0 s1 => apc (ap TVMem (eq_refl)) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s1))
   | TTMem s0 s1 s2 =>
       apc (apc (ap TTMem (eq_refl)) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s1))) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s2))
-  | TSel s0 => ap TSel (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)
-  | TSelA s0 s1 s2 =>
-      apc (apc (ap TSelA (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s1))) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s2))
+  | TSel s0 s1 => apc (ap TSel (compTrans_subst_ren_path _ zeta_vl _ E_vl s0)) ((eq_refl))
+  | TSelA s0 s1 s2 s3 =>
+      apc (apc (apc (ap TSelA (compTrans_subst_ren_path _ zeta_vl _ E_vl s0)) ((eq_refl))) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s2))) ((compTrans_subst_ren_ty _ zeta_vl _ E_vl s3))
   end.
 
 Definition compE_subst_ren_tm (sigma_vl: index -> vl) (zeta_vl: ren) (s: tm)
@@ -983,6 +1148,10 @@ Definition compE_subst_ren_dms (sigma_vl: index -> vl) (zeta_vl: ren) (s: dms)
 Definition compE_subst_ren_dm (sigma_vl: index -> vl) (zeta_vl: ren) (s: dm)
   : ren_dm zeta_vl (subst_dm sigma_vl s) = subst_dm (fun n => ren_vl (zeta_vl) (sigma_vl n)) s :=
   compTrans_subst_ren_dm sigma_vl zeta_vl (fun n => ren_vl (zeta_vl) (sigma_vl n)) (fun _ => eq_refl) s.
+
+Definition compE_subst_ren_path (sigma_vl: index -> vl) (zeta_vl: ren) (s: path)
+  : ren_path zeta_vl (subst_path sigma_vl s) = subst_path (fun n => ren_vl (zeta_vl) (sigma_vl n)) s :=
+  compTrans_subst_ren_path sigma_vl zeta_vl (fun n => ren_vl (zeta_vl) (sigma_vl n)) (fun _ => eq_refl) s.
 
 Definition compE_subst_ren_ty (sigma_vl: index -> vl) (zeta_vl: ren) (s: ty)
   : ren_ty zeta_vl (subst_ty sigma_vl s) = subst_ty (fun n => ren_vl (zeta_vl) (sigma_vl n)) s :=
@@ -1028,6 +1197,16 @@ Definition up_subst_subst_dm_vl (sigma_vl theta_vl tau_vl: index -> vl) (E_vl: (
       eq_trans (compE_ren_subst_vl S _ (sigma_vl n)) (eq_trans (eq_sym (compE_subst_ren_vl theta_vl S (sigma_vl n))) (ap (ren_vl S) (E_vl n)))
   end.
 
+Definition up_subst_subst_path_vl (sigma_vl theta_vl tau_vl: index -> vl) (E_vl: (fun x =>  subst_vl theta_vl (sigma_vl x)) == tau_vl)
+  : @eq_of_subst subst_of_path (comp_path (up_path_vl sigma_vl) (up_path_vl theta_vl)) (up_path_vl tau_vl) :=
+  fun n => match n return match comp_path (up_path_vl sigma_vl) (up_path_vl theta_vl), up_path_vl tau_vl with
+  | sigma_vl, tau_vl => sigma_vl n = tau_vl n
+  end with
+  | 0 => eq_refl
+  | S n =>
+      eq_trans (compE_ren_subst_vl S _ (sigma_vl n)) (eq_trans (eq_sym (compE_subst_ren_vl theta_vl S (sigma_vl n))) (ap (ren_vl S) (E_vl n)))
+  end.
+
 Definition up_subst_subst_ty_vl (sigma_vl theta_vl tau_vl: index -> vl) (E_vl: (fun x =>  subst_vl theta_vl (sigma_vl x)) == tau_vl)
   : @eq_of_subst subst_of_ty (comp_ty (up_ty_vl sigma_vl) (up_ty_vl theta_vl)) (up_ty_vl tau_vl) :=
   fun n => match n return match comp_ty (up_ty_vl sigma_vl) (up_ty_vl theta_vl), up_ty_vl tau_vl with
@@ -1042,7 +1221,7 @@ Fixpoint compTrans_subst_subst_tm (sigma_vl tau_vl theta_vl: index -> vl)
            (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl)
            (s: tm) : subst_tm tau_vl (subst_tm sigma_vl s) = subst_tm theta_vl s :=
   match s with
-  
+
   | tv s0 => ap tv (compTrans_subst_subst_vl _ _ _ E_vl s0)
   | tapp s0 s1 => apc (ap tapp (compTrans_subst_subst_tm _ _ _ E_vl s0)) ((compTrans_subst_subst_tm _ _ _ E_vl s1))
   | tproj s0 s1 => apc (ap tproj (compTrans_subst_subst_tm _ _ _ E_vl s0)) ((eq_refl))
@@ -1062,22 +1241,30 @@ Fixpoint compTrans_subst_subst_tm (sigma_vl tau_vl theta_vl: index -> vl)
         (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl)
         (s: dms) : subst_dms tau_vl (subst_dms sigma_vl s) = subst_dms theta_vl s :=
   match s with
-  
+
   | dnil  => eq_refl
   | dcons s0 s1 => apc (ap dcons (compTrans_subst_subst_dm _ _ _ E_vl s0)) ((compTrans_subst_subst_dms _ _ _ E_vl s1))
   end
  with compTrans_subst_subst_dm (sigma_vl tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl) (s: dm)
         : subst_dm tau_vl (subst_dm sigma_vl s) = subst_dm theta_vl s :=
   match s with
-  
+
   | dtysyn s0 => ap dtysyn (compTrans_subst_subst_ty _ _ _ E_vl s0)
   | dtysem s0 => ap dtysem (eq_refl)
   | dvl s0 => ap dvl (compTrans_subst_subst_vl _ _ _ E_vl s0)
   end
+ with compTrans_subst_subst_path (sigma_vl tau_vl theta_vl: index -> vl)
+        (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl)
+        (s: path) : subst_path tau_vl (subst_path sigma_vl s) = subst_path theta_vl s :=
+  match s with
+
+  | pv s0 => ap pv (compTrans_subst_subst_vl _ _ _ E_vl s0)
+  | pself s0 s1 => apc (ap pself (compTrans_subst_subst_path _ _ _ E_vl s0)) ((eq_refl))
+  end
  with compTrans_subst_subst_ty (sigma_vl tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl) (s: ty)
         : subst_ty tau_vl (subst_ty sigma_vl s) = subst_ty theta_vl s :=
   match s with
-  
+
   | TTop  => eq_refl
   | TBot  => eq_refl
   | TAnd s0 s1 => apc (ap TAnd (compTrans_subst_subst_ty _ _ _ E_vl s0)) ((compTrans_subst_subst_ty _ _ _ E_vl s1))
@@ -1086,14 +1273,14 @@ Fixpoint compTrans_subst_subst_tm (sigma_vl tau_vl theta_vl: index -> vl)
   | TAll s0 s1 => apc (ap TAll (compTrans_subst_subst_ty _ _ _ E_vl s0)) ((match up_subst_subst_ty_vl sigma_vl tau_vl theta_vl E_vl with
       | E_vl => compTrans_subst_subst_ty _ _ _ E_vl s1
       end))
-  | TBind s0 => ap TBind (match up_subst_subst_ty_vl sigma_vl tau_vl theta_vl E_vl with
+  | TMu s0 => ap TMu (match up_subst_subst_ty_vl sigma_vl tau_vl theta_vl E_vl with
       | E_vl => compTrans_subst_subst_ty _ _ _ E_vl s0
       end)
   | TVMem s0 s1 => apc (ap TVMem (eq_refl)) ((compTrans_subst_subst_ty _ _ _ E_vl s1))
   | TTMem s0 s1 s2 => apc (apc (ap TTMem (eq_refl)) ((compTrans_subst_subst_ty _ _ _ E_vl s1))) ((compTrans_subst_subst_ty _ _ _ E_vl s2))
-  | TSel s0 => ap TSel (compTrans_subst_subst_vl _ _ _ E_vl s0)
-  | TSelA s0 s1 s2 =>
-      apc (apc (ap TSelA (compTrans_subst_subst_vl _ _ _ E_vl s0)) ((compTrans_subst_subst_ty _ _ _ E_vl s1))) ((compTrans_subst_subst_ty _ _ _ E_vl s2))
+  | TSel s0 s1 => apc (ap TSel (compTrans_subst_subst_path _ _ _ E_vl s0)) ((eq_refl))
+  | TSelA s0 s1 s2 s3 =>
+      apc (apc (apc (ap TSelA (compTrans_subst_subst_path _ _ _ E_vl s0)) ((eq_refl))) ((compTrans_subst_subst_ty _ _ _ E_vl s2))) ((compTrans_subst_subst_ty _ _ _ E_vl s3))
   end.
 
 Definition compE_subst_subst_tm (sigma_vl tau_vl: index -> vl) (s: tm)
@@ -1111,6 +1298,10 @@ Definition compE_subst_subst_dms (sigma_vl tau_vl: index -> vl) (s: dms)
 Definition compE_subst_subst_dm (sigma_vl tau_vl: index -> vl) (s: dm)
   : subst_dm tau_vl (subst_dm sigma_vl s) = subst_dm (fun n => subst_vl (tau_vl) (sigma_vl n)) s :=
   compTrans_subst_subst_dm sigma_vl tau_vl (fun n => subst_vl (tau_vl) (sigma_vl n)) (fun _ => eq_refl) s.
+
+Definition compE_subst_subst_path (sigma_vl tau_vl: index -> vl) (s: path)
+  : subst_path tau_vl (subst_path sigma_vl s) = subst_path (fun n => subst_vl (tau_vl) (sigma_vl n)) s :=
+  compTrans_subst_subst_path sigma_vl tau_vl (fun n => subst_vl (tau_vl) (sigma_vl n)) (fun _ => eq_refl) s.
 
 Definition compE_subst_subst_ty (sigma_vl tau_vl: index -> vl) (s: ty)
   : subst_ty tau_vl (subst_ty sigma_vl s) = subst_ty (fun n => subst_vl (tau_vl) (sigma_vl n)) s :=
@@ -1140,6 +1331,12 @@ Definition eq_up_dm_vl {sigma tau: subst_of subst_of_dm} (E: eq_of_subst sigma t
   with 0 => eq_refl | S j => ap _ (E_vl j) end).
 Defined.
 
+Definition eq_up_path_vl {sigma tau: subst_of subst_of_path} (E: eq_of_subst sigma tau) : eq_of_subst (up_path_vl sigma) (up_path_vl tau).
+  rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
+  exact (fun i: index => match i return (var_vl 0 .: sigma_vl >>> ren_vl (castren_path_vl S)) i = (var_vl 0 .: tau_vl >>> ren_vl (castren_path_vl S)) i
+  with 0 => eq_refl | S j => ap _ (E_vl j) end).
+Defined.
+
 Definition eq_up_ty_vl {sigma tau: subst_of subst_of_ty} (E: eq_of_subst sigma tau) : eq_of_subst (up_ty_vl sigma) (up_ty_vl tau).
   rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
   exact (fun i: index => match i return (var_vl 0 .: sigma_vl >>> ren_vl (castren_ty_vl S)) i = (var_vl 0 .: tau_vl >>> ren_vl (castren_ty_vl S)) i
@@ -1148,7 +1345,7 @@ Defined.
 
 Fixpoint subst_eq_tm {sigma tau: subst_of subst_of_tm} (E: eq_of_subst sigma tau) (s: tm) : subst_tm sigma s = subst_tm tau s :=
   match s with
-  
+
   | tv s0 => congr_tv (subst_eq_vl (eq_cast_tm_vl E) s0)
   | tapp s0 s1 => congr_tapp (subst_eq_tm E s0) (subst_eq_tm E s1)
   | tproj s0 s1 => congr_tproj (subst_eq_tm E s0) (eq_refl)
@@ -1161,31 +1358,37 @@ Fixpoint subst_eq_tm {sigma tau: subst_of subst_of_tm} (E: eq_of_subst sigma tau
   end
  with subst_eq_dms {sigma tau: subst_of subst_of_dms} (E: eq_of_subst sigma tau) (s: dms) : subst_dms sigma s = subst_dms tau s :=
   match s with
-  
-  | dnil  => congr_dnil 
+
+  | dnil  => congr_dnil
   | dcons s0 s1 => congr_dcons (subst_eq_dm (eq_cast_dms_dm E) s0) (subst_eq_dms E s1)
   end
  with subst_eq_dm {sigma tau: subst_of subst_of_dm} (E: eq_of_subst sigma tau) (s: dm) : subst_dm sigma s = subst_dm tau s :=
   match s with
-  
+
   | dtysyn s0 => congr_dtysyn (subst_eq_ty (eq_cast_dm_ty E) s0)
   | dtysem s0 => congr_dtysem (eq_refl)
   | dvl s0 => congr_dvl (subst_eq_vl (eq_cast_dm_vl E) s0)
   end
+ with subst_eq_path {sigma tau: subst_of subst_of_path} (E: eq_of_subst sigma tau) (s: path) : subst_path sigma s = subst_path tau s :=
+  match s with
+
+  | pv s0 => congr_pv (subst_eq_vl (eq_cast_path_vl E) s0)
+  | pself s0 s1 => congr_pself (subst_eq_path E s0) (eq_refl)
+  end
  with subst_eq_ty {sigma tau: subst_of subst_of_ty} (E: eq_of_subst sigma tau) (s: ty) : subst_ty sigma s = subst_ty tau s :=
   match s with
-  
-  | TTop  => congr_TTop 
-  | TBot  => congr_TBot 
+
+  | TTop  => congr_TTop
+  | TBot  => congr_TBot
   | TAnd s0 s1 => congr_TAnd (subst_eq_ty E s0) (subst_eq_ty E s1)
   | TOr s0 s1 => congr_TOr (subst_eq_ty E s0) (subst_eq_ty E s1)
   | TLater s0 => congr_TLater (subst_eq_ty E s0)
   | TAll s0 s1 => congr_TAll (subst_eq_ty E s0) (subst_eq_ty (eq_up_ty_vl E) s1)
-  | TBind s0 => congr_TBind (subst_eq_ty (eq_up_ty_vl E) s0)
+  | TMu s0 => congr_TMu (subst_eq_ty (eq_up_ty_vl E) s0)
   | TVMem s0 s1 => congr_TVMem (eq_refl) (subst_eq_ty E s1)
   | TTMem s0 s1 s2 => congr_TTMem (eq_refl) (subst_eq_ty E s1) (subst_eq_ty E s2)
-  | TSel s0 => congr_TSel (subst_eq_vl (eq_cast_ty_vl E) s0)
-  | TSelA s0 s1 s2 => congr_TSelA (subst_eq_vl (eq_cast_ty_vl E) s0) (subst_eq_ty E s1) (subst_eq_ty E s2)
+  | TSel s0 s1 => congr_TSel (subst_eq_path (eq_cast_ty_path E) s0) (eq_refl)
+  | TSelA s0 s1 s2 s3 => congr_TSelA (subst_eq_path (eq_cast_ty_path E) s0) (eq_refl) (subst_eq_ty E s2) (subst_eq_ty E s3)
   end.
 
 Class AsimplInst_tm (s: tm) (sigma: subst_of subst_of_tm) (t: tm) := asimplInstEqn_tm : (subst_tm sigma) s = t .
@@ -1240,6 +1443,19 @@ Class AsimplComp_dm (sigma tau theta: subst_of subst_of_dm) := asimplCompEqn_dm 
 end .
 Hint Mode AsimplComp_dm + + - : typeclass_instance.
 
+Class AsimplInst_path (s: path) (sigma: subst_of subst_of_path) (t: path) := asimplInstEqn_path : (subst_path sigma) s = t .
+Hint Mode AsimplInst_path + + - : typeclass_instance.
+
+Class AsimplSubst_path (sigma tau: subst_of subst_of_path) := asimplSubstEqn_path : match sigma, tau with
+| sigma_vl, tau_vl => (forall x, sigma_vl x = tau_vl x)
+end .
+Hint Mode AsimplSubst_path + - : typeclass_instance.
+
+Class AsimplComp_path (sigma tau theta: subst_of subst_of_path) := asimplCompEqn_path : match comp_path sigma tau, theta with
+| sigma_tau_vl, theta_vl => (forall x, sigma_tau_vl x = theta_vl x)
+end .
+Hint Mode AsimplComp_path + + - : typeclass_instance.
+
 Class AsimplInst_ty (s: ty) (sigma: subst_of subst_of_ty) (t: ty) := asimplInstEqn_ty : (subst_ty sigma) s = t .
 Hint Mode AsimplInst_ty + + - : typeclass_instance.
 
@@ -1252,6 +1468,18 @@ Class AsimplComp_ty (sigma tau theta: subst_of subst_of_ty) := asimplCompEqn_ty 
 | sigma_tau_vl, theta_vl => (forall x, sigma_tau_vl x = theta_vl x)
 end .
 Hint Mode AsimplComp_ty + + - : typeclass_instance.
+
+(* Class AsimplSubst_label (sigma tau: subst_of subst_of_label) := asimplSubstEqn_label : match sigma, tau with *)
+(* | sigma_vl, tau_vl => sigma_vl = tau_vl *)
+(* end . *)
+(* Hint Mode AsimplSubst_label + - : typeclass_instance. *)
+
+
+(* Class AsimplSubst_gname (sigma tau: subst_of subst_of_gname) := asimplSubstEqn_gname : match sigma, tau with *)
+(* | sigma_vl, tau_vl => sigma_vl = tau_vl *)
+(* end . *)
+(* Hint Mode AsimplSubst_gname + - : typeclass_instance. *)
+
 
 Instance AsimplCast_tm_vl (sigma_vl: index -> vl)
 (tau: subst_of subst_of_vl)
@@ -1272,27 +1500,64 @@ Proof. reflexivity. Qed.
 
 
 
+(* Proof written by hand. *)
 Instance asimplInst_tv (s0 s0': _)
 (sigma: subst_of subst_of_tm)
 (theta_0: subst_of subst_of_vl)
 (E_0': AsimplSubst_vl (((cast_tm_vl sigma))) theta_0)
 (E_0: AsimplInst_vl s0 theta_0 s0') : AsimplInst_tm (tv s0) sigma (tv s0').
-Admitted.
+Proof.
+  unfold AsimplInst_tm; simpl; f_equal.
+  rewrite <- E_0; auto using subst_eq_vl.
+Qed.
 Instance asimplInst_tapp (s0 s1 s0' s1': _)
 (sigma theta_0 theta_1: subst_of subst_of_tm)
 (E_0': AsimplSubst_tm (sigma) theta_0)
 (E_1': AsimplSubst_tm (sigma) theta_1)
 (E_0: AsimplInst_tm s0 theta_0 s0')
 (E_1: AsimplInst_tm s1 theta_1 s1') : AsimplInst_tm (tapp s0 s1) sigma (tapp s0' s1').
-Admitted.
+Proof.
+  unfold AsimplInst_tm; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_tm.
+  - rewrite <- E_1; auto using subst_eq_tm.
+Qed.
+
+Definition subst_label (sigma: subst_of subst_of_label) (s: label) : label := s.
+Definition subst_gname (sigma: subst_of subst_of_gname) (s: gname) : gname := s.
+
+Class AsimplInst_label (s: label) (sigma: subst_of subst_of_label) (t: label) := asimplInstEqn_label : (subst_label sigma) s = t .
+Hint Mode AsimplInst_label + + - : typeclass_instance.
+
+Class AsimplInst_gname (s: gname) (sigma: subst_of subst_of_gname) (t: gname) := asimplInstEqn_gname : (subst_gname sigma) s = t .
+Hint Mode AsimplInst_gname + + - : typeclass_instance.
+
+(* Definition comp_label (sigma tau: subst_of subst_of_label) : subst_of subst_of_label :=  *)
+(*   match sigma with *)
+(*   | sigma_vl => subst_vl (cast_tm_vl tau) sigma_vl *)
+(*   end. *)
+
+
+(* Definition comp_tm (sigma tau: subst_of subst_of_tm) : subst_of subst_of_tm := *)
+(*   match sigma with *)
+(*   | sigma_vl => fun x => subst_vl (cast_tm_vl tau) (sigma_vl x) *)
+(*   end. *)
+(* Class AsimplComp_gname (sigma tau theta: subst_of subst_of_gname) := asimplCompEqn_gname : match comp_gname sigma tau, theta with *)
+(* | sigma_tau_vl, theta_vl => (forall x, sigma_tau_vl x = theta_vl x) *)
+(* end . *)
+(* Hint Mode AsimplComp_gname + + - : typeclass_instance. *)
+
 Instance asimplInst_tproj (s0 s1 s0' s1': _)
 (sigma theta_0: subst_of subst_of_tm)
 (theta_1: subst_of subst_of_label)
 (E_0': AsimplSubst_tm (sigma) theta_0)
-(E_1': AsimplSubst_label sigma theta_1)
+(* (E_1': AsimplSubst_label sigma theta_1) *)
 (E_0: AsimplInst_tm s0 theta_0 s0')
 (E_1: AsimplInst_label s1 theta_1 s1') : AsimplInst_tm (tproj s0 s1) sigma (tproj s0' s1').
-Admitted.
+Proof.
+  unfold AsimplInst_tm; simpl. f_equal.
+  - rewrite <- E_0; auto using subst_eq_tm.
+  - rewrite <- E_1; eauto.
+Qed.
 
 Instance AsimplId_tm (s: tm) : AsimplInst_tm s var_vl s.
 Proof. apply id_tm; reflexivity. Qed.
@@ -1302,22 +1567,33 @@ Instance AsimplInstInst_tm (s t: tm)
 (E1: AsimplSubst_tm sigma sigma')
 (E2: AsimplComp_tm sigma' tau sigma_tau)
 (E3: AsimplInst_tm s sigma_tau t) : AsimplInst_tm (subst_tm sigma s) tau t.
-Admitted.
+Proof.
+  hnf in *. rewrite <- E3.
+  apply compTrans_subst_subst_tm.
+  - intros. rewrite E1. apply E2.
+Qed. 
 
 Instance AsimplSubstRefl_tm (sigma: subst_of subst_of_tm) : AsimplSubst_tm sigma sigma | 100.
-Admitted.
+Proof. intro. reflexivity. Qed.
 
 Instance AsimplSubstComp_tm (sigma sigma' tau tau' theta: subst_of subst_of_tm)
 (E_sigma: AsimplSubst_tm sigma sigma')
 (E_tau: AsimplSubst_tm tau tau')
 (E: AsimplComp_tm sigma' tau' theta) : AsimplSubst_tm (comp_tm sigma tau) theta |90.
-Admitted.
+Proof.
+  hnf in *.
+  intro. rewrite <- E.
+  unfold comp_tm, cast_tm_vl in *.
+  rewrite E_sigma.
+  apply subst_eq_vl.
+  assumption. 
+Qed.
 
 Instance AsimplSubstCongr_tm (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_tm sigma_vl tau_vl |95.
 Proof. repeat split; assumption. Qed.
 
 Instance AsimplCompRefl_tm (sigma tau: subst_of subst_of_tm) : AsimplComp_tm sigma tau (comp_tm sigma tau) | 100.
-Admitted.
+Proof. intro. reflexivity. Qed.
 
 
 
@@ -1327,21 +1603,32 @@ Proof. intros x. apply id_tm; reflexivity. Qed.
 Instance AsimplCompAsso_tm (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_tm)
 (E: AsimplComp_tm tau theta tau_theta)
 (E': AsimplComp_tm sigma tau_theta sigma_tau_theta) : AsimplComp_tm (comp_tm sigma tau) theta sigma_tau_theta.
-Admitted.
+Proof.
+  hnf in *. intro.
+  rewrite <- E'.
+  unfold comp_tm. erewrite compTrans_subst_subst_vl; eauto.
+Qed. 
 
 Instance AsimplCompCongr_tm (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_tm)
 (E_vl: AsimplSubst_vl ((cast_tm_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_tm sigma_vl tau theta_vl.
-Admitted.
+Proof.
+  hnf in *. intros.
+  rewrite <- E_vl'. simpl. apply subst_eq_vl. auto.
+Qed.
 
 Instance AsimplCompCongr'_tm (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_tm)
 (E_vl: AsimplSubst_vl ((cast_tm_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_tm sigma_vl) (subst_tm tau) (subst_tm theta_vl).
-Admitted.
+Proof.
+  intros s. simpl.
+  erewrite AsimplInstInst_tm with (sigma' := sigma_vl) (sigma_tau := theta_vl); try split; auto.
+  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption.
+Qed. 
 
 Instance AsimplRefl_tm (s: tm) : Asimpl s s | 100.
 Proof. reflexivity. Qed.
@@ -1354,9 +1641,44 @@ Instance AsimplGenComp_tm (sigma sigma': index -> tm)
 (E'': AsimplComp sigma' (subst_tm tau') theta) : AsimplGen (sigma >>> (subst_tm tau) ) theta.
 Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_tm . Qed.
 
+(* Proof *and statement* written by hand. *)
+Lemma up_ren_up (xi : ren) (sigma : index -> vl) (E : (xi >>> var_vl) == sigma) :
+  (upren_vl_vl xi >>> var_vl) == up_vl_vl sigma. 
+Proof.
+  intros [|x].
+  - reflexivity.
+  - simpl. unfold compren_vl. rewrite <- E. cbv. reflexivity.
+Qed.
+  
+
+(* Proof *and statement* written by hand. *)
+Fixpoint ren_inst_vl_vl (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : vl) :
+  ren_vl xi s = s.[sigma]
+with ren_inst_vl_tm (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : tm):
+  ren_tm xi s = s.[sigma]
+with ren_inst_vl_ty (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : ty):
+  ren_ty xi s = s.[sigma]
+with ren_inst_vl_dms (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : dms):
+  ren_dms xi s = s.[sigma]
+with ren_inst_vl_dm (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : dm):
+  ren_dm xi s = s.[sigma]
+with ren_inst_vl_path (xi : ren) (sigma : index -> vl)  (E : (xi >>> var_vl) == sigma) (s : path):
+  ren_path xi s = s.[sigma].
+Proof.
+  (* Beware: using eauto in a fixpoint is dangerous, but we use it *after* f_equal. *)
+  all: induction s; cbn; f_equal; eauto using up_ren_up.
+Qed.
+
+
 Instance AsimplSubstUp_tm_vl (sigma_vl tau_vl: index -> vl)
 (E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_tm_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_tm (up_tm_vl sigma_vl) tau_vl.
-Admitted.
+Proof.
+  hnf in*. intro x.
+  rewrite <- E_vl.
+  destruct x; simpl; trivial.
+  unfold compren_tm; erewrite ren_inst_vl_vl; reflexivity.
+Qed.
+
 
 
 
@@ -1388,13 +1710,20 @@ Instance asimplInst_vabs (s0 s0': _)
 (theta_0: subst_of subst_of_tm)
 (E_0': AsimplSubst_tm ((up_vl_vl ((cast_vl_tm sigma)))) theta_0)
 (E_0: AsimplInst_tm s0 theta_0 s0') : AsimplInst_vl (vabs s0) sigma (vabs s0').
-Admitted.
+Proof.
+  hnf in *; simpl; f_equal.
+  rewrite <- E_0. eauto using subst_eq_tm.
+Qed.
+
 Instance asimplInst_vobj (s0 s0': _)
 (sigma: subst_of subst_of_vl)
 (theta_0: subst_of subst_of_dms)
 (E_0': AsimplSubst_dms ((up_vl_vl ((cast_vl_dms sigma)))) theta_0)
 (E_0: AsimplInst_dms s0 theta_0 s0') : AsimplInst_vl (vobj s0) sigma (vobj s0').
-Admitted.
+Proof.
+  hnf in *; simpl; f_equal.
+  rewrite <- E_0. eauto using subst_eq_dms.
+Qed.
 
 Instance AsimplId_vl (s: vl) : AsimplInst_vl s var_vl s.
 Proof. apply id_vl; reflexivity. Qed.
@@ -1404,27 +1733,43 @@ Instance AsimplInstInst_vl (s t: vl)
 (E1: AsimplSubst_vl sigma sigma')
 (E2: AsimplComp_vl sigma' tau sigma_tau)
 (E3: AsimplInst_vl s sigma_tau t) : AsimplInst_vl (subst_vl sigma s) tau t.
-Admitted.
+Proof.
+  hnf in *.
+  rewrite <- E3.
+  apply compTrans_subst_subst_vl. intro.
+  rewrite E1.
+  apply E2.
+Qed.
 
 Instance AsimplSubstRefl_vl (sigma: subst_of subst_of_vl) : AsimplSubst_vl sigma sigma | 100.
-Admitted.
+Proof. done. Qed.
 
 Instance AsimplSubstComp_vl (sigma sigma' tau tau' theta: subst_of subst_of_vl)
 (E_sigma: AsimplSubst_vl sigma sigma')
 (E_tau: AsimplSubst_vl tau tau')
 (E: AsimplComp_vl sigma' tau' theta) : AsimplSubst_vl (comp_vl sigma tau) theta |90.
-Admitted.
+Proof.
+  hnf in *.
+  intro. rewrite <- E.
+  unfold comp_vl in *.
+  rewrite E_sigma.
+  apply subst_eq_vl.
+  assumption. 
+Qed.
+
+
 
 Instance AsimplSubstCongr_vl (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_vl sigma_vl tau_vl |95.
 Proof. repeat split; assumption. Qed.
 
 Instance AsimplCompRefl_vl (sigma tau: subst_of subst_of_vl) : AsimplComp_vl sigma tau (comp_vl sigma tau) | 100.
-Admitted.
+Proof. done. Qed.
 
 Instance AsimplCompIdL_vl (sigma: subst_of subst_of_vl)
 (tau: index -> vl)
 (E: AsimplGen (toVar_vl sigma) tau) : AsimplComp var_vl (subst_vl sigma) tau.
-Admitted.
+Proof. done. Qed.
+
 
 Instance AsimplCompIdR_vl (sigma: index -> vl) : AsimplComp sigma (subst_vl var_vl) sigma.
 Proof. intros x. apply id_vl; reflexivity. Qed.
@@ -1432,19 +1777,31 @@ Proof. intros x. apply id_vl; reflexivity. Qed.
 Instance AsimplCompAsso_vl (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_vl)
 (E: AsimplComp_vl tau theta tau_theta)
 (E': AsimplComp_vl sigma tau_theta sigma_tau_theta) : AsimplComp_vl (comp_vl sigma tau) theta sigma_tau_theta.
-Admitted.
+Proof.
+  hnf in *. intro.
+  rewrite <- E'.
+  unfold comp_vl. erewrite compTrans_subst_subst_vl; eauto.
+Qed.
 
 Instance AsimplCompCongr_vl (sigma_vl theta_vl: index -> vl)
 (tau_vl tau: subst_of subst_of_vl)
 (E_vl: AsimplSubst_vl (tau) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_vl sigma_vl tau theta_vl.
-Admitted.
+Proof.
+  hnf in *. intros.
+  rewrite <- E_vl'. simpl. apply subst_eq_vl. auto.
+Qed.
+
 
 Instance AsimplCompCongr'_vl (sigma_vl theta_vl: index -> vl)
 (tau_vl tau: subst_of subst_of_vl)
 (E_vl: AsimplSubst_vl (tau) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_vl sigma_vl) (subst_vl tau) (subst_vl theta_vl).
-Admitted.
+Proof.
+  intros s. simpl.
+  erewrite AsimplInstInst_vl with (sigma' := sigma_vl) (sigma_tau := theta_vl); try split; auto.
+  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption.
+Qed. 
 
 Instance AsimplRefl_vl (s: vl) : Asimpl s s | 100.
 Proof. reflexivity. Qed.
@@ -1459,7 +1816,13 @@ Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_vl . Qed.
 
 Instance AsimplSubstUp_vl_vl (sigma_vl tau_vl: index -> vl)
 (E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((S >>> var_vl)))) tau_vl) : AsimplSubst_vl (up_vl_vl sigma_vl) tau_vl.
-Admitted.
+Proof.
+  hnf in*. intro x.
+  rewrite <- E_vl.
+  destruct x; simpl; trivial.
+  unfold compren_vl; erewrite ren_inst_vl_vl; reflexivity.
+Qed.
+
 
 Typeclasses Opaque toVar_vl.
 
@@ -1483,7 +1846,8 @@ Proof. reflexivity. Qed.
 
 
 Instance asimplInst_dnil (sigma: subst_of subst_of_dms) : AsimplInst_dms (dnil ) sigma (dnil ).
-Admitted.
+Proof. done. Qed.
+
 Instance asimplInst_dcons (s0 s1 s0' s1': _)
 (sigma: subst_of subst_of_dms)
 (theta_0: subst_of subst_of_dm)
@@ -1492,7 +1856,11 @@ Instance asimplInst_dcons (s0 s1 s0' s1': _)
 (E_1': AsimplSubst_dms (sigma) theta_1)
 (E_0: AsimplInst_dm s0 theta_0 s0')
 (E_1: AsimplInst_dms s1 theta_1 s1') : AsimplInst_dms (dcons s0 s1) sigma (dcons s0' s1').
-Admitted.
+Proof. 
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0. eauto using subst_eq_dm.
+  - rewrite <- E_1. eauto using subst_eq_dms.
+Qed.
 
 Instance AsimplId_dms (s: dms) : AsimplInst_dms s var_vl s.
 Proof. apply id_dms; reflexivity. Qed.
@@ -1502,22 +1870,40 @@ Instance AsimplInstInst_dms (s t: dms)
 (E1: AsimplSubst_dms sigma sigma')
 (E2: AsimplComp_dms sigma' tau sigma_tau)
 (E3: AsimplInst_dms s sigma_tau t) : AsimplInst_dms (subst_dms sigma s) tau t.
-Admitted.
+Proof.
+  hnf in *.
+  rewrite <- E3.
+  apply compTrans_subst_subst_dms. intro.
+  rewrite E1.
+  apply E2.
+Qed.
+
+
 
 Instance AsimplSubstRefl_dms (sigma: subst_of subst_of_dms) : AsimplSubst_dms sigma sigma | 100.
-Admitted.
+Proof. done. Qed.
 
 Instance AsimplSubstComp_dms (sigma sigma' tau tau' theta: subst_of subst_of_dms)
 (E_sigma: AsimplSubst_dms sigma sigma')
 (E_tau: AsimplSubst_dms tau tau')
 (E: AsimplComp_dms sigma' tau' theta) : AsimplSubst_dms (comp_dms sigma tau) theta |90.
-Admitted.
+Proof.
+  hnf in *.
+  intro. rewrite <- E.
+  unfold comp_dms in *.
+  rewrite E_sigma.
+  apply subst_eq_vl.
+  assumption. 
+Qed.
+
+
 
 Instance AsimplSubstCongr_dms (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_dms sigma_vl tau_vl |95.
 Proof. repeat split; assumption. Qed.
 
 Instance AsimplCompRefl_dms (sigma tau: subst_of subst_of_dms) : AsimplComp_dms sigma tau (comp_dms sigma tau) | 100.
-Admitted.
+Proof. done. Qed.
+
 
 
 
@@ -1527,21 +1913,36 @@ Proof. intros x. apply id_dms; reflexivity. Qed.
 Instance AsimplCompAsso_dms (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_dms)
 (E: AsimplComp_dms tau theta tau_theta)
 (E': AsimplComp_dms sigma tau_theta sigma_tau_theta) : AsimplComp_dms (comp_dms sigma tau) theta sigma_tau_theta.
-Admitted.
+Proof.
+  hnf in *. intro.
+  rewrite <- E'.
+  unfold comp_dms. erewrite compTrans_subst_subst_vl; eauto.
+Qed.
+
 
 Instance AsimplCompCongr_dms (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_dms)
 (E_vl: AsimplSubst_vl ((cast_dms_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_dms sigma_vl tau theta_vl.
-Admitted.
+Proof.
+  hnf in *. intros.
+  rewrite <- E_vl'. simpl. apply subst_eq_vl. auto.
+Qed.
+
+
 
 Instance AsimplCompCongr'_dms (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_dms)
 (E_vl: AsimplSubst_vl ((cast_dms_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_dms sigma_vl) (subst_dms tau) (subst_dms theta_vl).
-Admitted.
+Proof.
+  intros s. simpl.
+  erewrite AsimplInstInst_dms with (sigma' := sigma_vl) (sigma_tau := theta_vl); try split; auto.
+  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption.
+Qed. 
+
 
 Instance AsimplRefl_dms (s: dms) : Asimpl s s | 100.
 Proof. reflexivity. Qed.
@@ -1556,7 +1957,13 @@ Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_dms . Qed.
 
 Instance AsimplSubstUp_dms_vl (sigma_vl tau_vl: index -> vl)
 (E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_dms_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_dms (up_dms_vl sigma_vl) tau_vl.
-Admitted.
+Proof.
+  hnf in*. intro x.
+  rewrite <- E_vl.
+  destruct x; simpl; trivial.
+  unfold compren_dms; erewrite ren_inst_vl_vl; reflexivity.
+Qed.
+
 
 
 
@@ -1584,19 +1991,30 @@ Instance asimplInst_dtysyn (s0 s0': _)
 (theta_0: subst_of subst_of_ty)
 (E_0': AsimplSubst_ty (((cast_dm_ty sigma))) theta_0)
 (E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_dm (dtysyn s0) sigma (dtysyn s0').
-Admitted.
+Proof.
+  hnf in *; simpl. f_equal.
+  rewrite <- E_0; auto using subst_eq_ty.
+Qed.
+
 Instance asimplInst_dtysem (s0 s0': _)
 (sigma: subst_of subst_of_dm)
 (theta_0: subst_of subst_of_gname)
-(E_0': AsimplSubst_gname sigma theta_0)
+(* (E_0': AsimplSubst_gname sigma theta_0) *)
 (E_0: AsimplInst_gname s0 theta_0 s0') : AsimplInst_dm (dtysem s0) sigma (dtysem s0').
-Admitted.
+Proof.
+  hnf in *; simpl. f_equal.
+  rewrite <- E_0. reflexivity.
+Qed.
+
 Instance asimplInst_dvl (s0 s0': _)
 (sigma: subst_of subst_of_dm)
 (theta_0: subst_of subst_of_vl)
 (E_0': AsimplSubst_vl (((cast_dm_vl sigma))) theta_0)
 (E_0: AsimplInst_vl s0 theta_0 s0') : AsimplInst_dm (dvl s0) sigma (dvl s0').
-Admitted.
+Proof.
+  hnf in *; simpl. f_equal.
+  rewrite <- E_0; auto using subst_eq_vl.
+Qed.
 
 Instance AsimplId_dm (s: dm) : AsimplInst_dm s var_vl s.
 Proof. apply id_dm; reflexivity. Qed.
@@ -1606,22 +2024,37 @@ Instance AsimplInstInst_dm (s t: dm)
 (E1: AsimplSubst_dm sigma sigma')
 (E2: AsimplComp_dm sigma' tau sigma_tau)
 (E3: AsimplInst_dm s sigma_tau t) : AsimplInst_dm (subst_dm sigma s) tau t.
-Admitted.
+Proof.
+  hnf in *. rewrite <- E3.
+  apply compTrans_subst_subst_dm.
+  - intros. rewrite E1. apply E2.
+Qed. 
+
+
 
 Instance AsimplSubstRefl_dm (sigma: subst_of subst_of_dm) : AsimplSubst_dm sigma sigma | 100.
-Admitted.
+Proof. done. Qed.
 
 Instance AsimplSubstComp_dm (sigma sigma' tau tau' theta: subst_of subst_of_dm)
 (E_sigma: AsimplSubst_dm sigma sigma')
 (E_tau: AsimplSubst_dm tau tau')
 (E: AsimplComp_dm sigma' tau' theta) : AsimplSubst_dm (comp_dm sigma tau) theta |90.
-Admitted.
+Proof.
+  hnf in *.
+  intro. rewrite <- E.
+  unfold comp_dm, cast_dm_vl in *.
+  rewrite E_sigma.
+  apply subst_eq_vl.
+  assumption. 
+Qed.
+
+
 
 Instance AsimplSubstCongr_dm (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_dm sigma_vl tau_vl |95.
 Proof. repeat split; assumption. Qed.
 
 Instance AsimplCompRefl_dm (sigma tau: subst_of subst_of_dm) : AsimplComp_dm sigma tau (comp_dm sigma tau) | 100.
-Admitted.
+Proof. done. Qed.
 
 
 
@@ -1631,21 +2064,37 @@ Proof. intros x. apply id_dm; reflexivity. Qed.
 Instance AsimplCompAsso_dm (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_dm)
 (E: AsimplComp_dm tau theta tau_theta)
 (E': AsimplComp_dm sigma tau_theta sigma_tau_theta) : AsimplComp_dm (comp_dm sigma tau) theta sigma_tau_theta.
-Admitted.
+Proof.
+  hnf in *. intro.
+  rewrite <- E'.
+  unfold comp_dm. erewrite compTrans_subst_subst_vl; eauto.
+Qed. 
+
+
 
 Instance AsimplCompCongr_dm (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_dm)
 (E_vl: AsimplSubst_vl ((cast_dm_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_dm sigma_vl tau theta_vl.
-Admitted.
+Proof.
+  hnf in *. intros.
+  rewrite <- E_vl'. simpl. apply subst_eq_vl. auto.
+Qed.
+
 
 Instance AsimplCompCongr'_dm (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_dm)
 (E_vl: AsimplSubst_vl ((cast_dm_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_dm sigma_vl) (subst_dm tau) (subst_dm theta_vl).
-Admitted.
+Proof.
+  intros s. simpl.
+  erewrite AsimplInstInst_dm with (sigma' := sigma_vl) (sigma_tau := theta_vl); try split; auto.
+  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption.
+Qed. 
+
+
 
 Instance AsimplRefl_dm (s: dm) : Asimpl s s | 100.
 Proof. reflexivity. Qed.
@@ -1660,374 +2109,14 @@ Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_dm . Qed.
 
 Instance AsimplSubstUp_dm_vl (sigma_vl tau_vl: index -> vl)
 (E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_dm_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_dm (up_dm_vl sigma_vl) tau_vl.
-Admitted.
+Proof.
+  hnf in*. intro x.
+  rewrite <- E_vl.
+  destruct x; simpl; trivial.
+  unfold compren_dm; erewrite ren_inst_vl_vl; reflexivity.
+Qed.
 
 
-
-Instance AsimplCast_ty_vl (sigma_vl: index -> vl)
-(tau: subst_of subst_of_vl)
-(E: AsimplSubst_vl sigma_vl tau) : AsimplSubst_vl ((cast_ty_vl sigma_vl)) tau.
-Proof. apply E. Qed.
-Typeclasses Opaque cast_ty_vl.
-
-
-
-Instance AsimplAsimplInst_ty (s t: ty)
-(sigma sigma': subst_of subst_of_ty)
-(E_sigma: AsimplSubst_ty sigma sigma')
-(E: AsimplInst_ty s sigma' t) : Asimpl (subst_ty sigma s) t.
-Proof. rewrite <- E. apply subst_eq_ty. assumption. Qed.
-
-Instance AsimplInstRefl_ty (s: ty) (sigma: subst_of subst_of_ty) : AsimplInst_ty s sigma (s.[ sigma ]) |100.
-Proof. reflexivity. Qed.
-
-
-
-Instance asimplInst_TTop (sigma: subst_of subst_of_ty) : AsimplInst_ty (TTop ) sigma (TTop ).
-Admitted.
-Instance asimplInst_TBot (sigma: subst_of subst_of_ty) : AsimplInst_ty (TBot ) sigma (TBot ).
-Admitted.
-Instance asimplInst_TAnd (s0 s1 s0' s1': _)
-(sigma theta_0 theta_1: subst_of subst_of_ty)
-(E_0': AsimplSubst_ty (sigma) theta_0)
-(E_1': AsimplSubst_ty (sigma) theta_1)
-(E_0: AsimplInst_ty s0 theta_0 s0')
-(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TAnd s0 s1) sigma (TAnd s0' s1').
-Admitted.
-Instance asimplInst_TOr (s0 s1 s0' s1': _)
-(sigma theta_0 theta_1: subst_of subst_of_ty)
-(E_0': AsimplSubst_ty (sigma) theta_0)
-(E_1': AsimplSubst_ty (sigma) theta_1)
-(E_0: AsimplInst_ty s0 theta_0 s0')
-(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TOr s0 s1) sigma (TOr s0' s1').
-Admitted.
-Instance asimplInst_TLater (s0 s0': _)
-(sigma theta_0: subst_of subst_of_ty)
-(E_0': AsimplSubst_ty (sigma) theta_0)
-(E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_ty (TLater s0) sigma (TLater s0').
-Admitted.
-Instance asimplInst_TAll (s0 s1 s0' s1': _)
-(sigma theta_0 theta_1: subst_of subst_of_ty)
-(E_0': AsimplSubst_ty (sigma) theta_0)
-(E_1': AsimplSubst_ty ((up_ty_vl sigma)) theta_1)
-(E_0: AsimplInst_ty s0 theta_0 s0')
-(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TAll s0 s1) sigma (TAll s0' s1').
-Admitted.
-Instance asimplInst_TBind (s0 s0': _)
-(sigma theta_0: subst_of subst_of_ty)
-(E_0': AsimplSubst_ty ((up_ty_vl sigma)) theta_0)
-(E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_ty (TBind s0) sigma (TBind s0').
-Admitted.
-Instance asimplInst_TVMem (s0 s1 s0' s1': _)
-(sigma: subst_of subst_of_ty)
-(theta_0: subst_of subst_of_label)
-(theta_1: subst_of subst_of_ty)
-(E_0': AsimplSubst_label sigma theta_0)
-(E_1': AsimplSubst_ty (sigma) theta_1)
-(E_0: AsimplInst_label s0 theta_0 s0')
-(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TVMem s0 s1) sigma (TVMem s0' s1').
-Admitted.
-Instance asimplInst_TTMem (s0 s1 s2 s0' s1' s2': _)
-(sigma: subst_of subst_of_ty)
-(theta_0: subst_of subst_of_label)
-(theta_1 theta_2: subst_of subst_of_ty)
-(E_0': AsimplSubst_label sigma theta_0)
-(E_1': AsimplSubst_ty (sigma) theta_1)
-(E_2': AsimplSubst_ty (sigma) theta_2)
-(E_0: AsimplInst_label s0 theta_0 s0')
-(E_1: AsimplInst_ty s1 theta_1 s1')
-(E_2: AsimplInst_ty s2 theta_2 s2') : AsimplInst_ty (TTMem s0 s1 s2) sigma (TTMem s0' s1' s2').
-Admitted.
-Instance asimplInst_TSel (s0 s0': _)
-(sigma: subst_of subst_of_ty)
-(theta_0: subst_of subst_of_vl)
-(E_0': AsimplSubst_vl (((cast_ty_vl sigma))) theta_0)
-(E_0: AsimplInst_vl s0 theta_0 s0') : AsimplInst_ty (TSel s0) sigma (TSel s0').
-Admitted.
-Instance asimplInst_TSelA (s0 s1 s2 s0' s1' s2': _)
-(sigma: subst_of subst_of_ty)
-(theta_0: subst_of subst_of_vl)
-(theta_1 theta_2: subst_of subst_of_ty)
-(E_0': AsimplSubst_vl (((cast_ty_vl sigma))) theta_0)
-(E_1': AsimplSubst_ty (sigma) theta_1)
-(E_2': AsimplSubst_ty (sigma) theta_2)
-(E_0: AsimplInst_vl s0 theta_0 s0')
-(E_1: AsimplInst_ty s1 theta_1 s1')
-(E_2: AsimplInst_ty s2 theta_2 s2') : AsimplInst_ty (TSelA s0 s1 s2) sigma (TSelA s0' s1' s2').
-Admitted.
-
-Instance AsimplId_ty (s: ty) : AsimplInst_ty s var_vl s.
-Proof. apply id_ty; reflexivity. Qed.
-
-Instance AsimplInstInst_ty (s t: ty)
-(sigma sigma' tau sigma_tau: subst_of subst_of_ty)
-(E1: AsimplSubst_ty sigma sigma')
-(E2: AsimplComp_ty sigma' tau sigma_tau)
-(E3: AsimplInst_ty s sigma_tau t) : AsimplInst_ty (subst_ty sigma s) tau t.
-Admitted.
-
-Instance AsimplSubstRefl_ty (sigma: subst_of subst_of_ty) : AsimplSubst_ty sigma sigma | 100.
-Admitted.
-
-Instance AsimplSubstComp_ty (sigma sigma' tau tau' theta: subst_of subst_of_ty)
-(E_sigma: AsimplSubst_ty sigma sigma')
-(E_tau: AsimplSubst_ty tau tau')
-(E: AsimplComp_ty sigma' tau' theta) : AsimplSubst_ty (comp_ty sigma tau) theta |90.
-Admitted.
-
-Instance AsimplSubstCongr_ty (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_ty sigma_vl tau_vl |95.
-Proof. repeat split; assumption. Qed.
-
-Instance AsimplCompRefl_ty (sigma tau: subst_of subst_of_ty) : AsimplComp_ty sigma tau (comp_ty sigma tau) | 100.
-Admitted.
-
-
-
-Instance AsimplCompIdR_ty (sigma: index -> ty) : AsimplComp sigma (subst_ty var_vl) sigma.
-Proof. intros x. apply id_ty; reflexivity. Qed.
-
-Instance AsimplCompAsso_ty (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_ty)
-(E: AsimplComp_ty tau theta tau_theta)
-(E': AsimplComp_ty sigma tau_theta sigma_tau_theta) : AsimplComp_ty (comp_ty sigma tau) theta sigma_tau_theta.
-Admitted.
-
-Instance AsimplCompCongr_ty (sigma_vl theta_vl: index -> vl)
-(tau_vl: subst_of subst_of_vl)
-(tau: subst_of subst_of_ty)
-(E_vl: AsimplSubst_vl ((cast_ty_vl tau)) tau_vl)
-(E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_ty sigma_vl tau theta_vl.
-Admitted.
-
-Instance AsimplCompCongr'_ty (sigma_vl theta_vl: index -> vl)
-(tau_vl: subst_of subst_of_vl)
-(tau: subst_of subst_of_ty)
-(E_vl: AsimplSubst_vl ((cast_ty_vl tau)) tau_vl)
-(E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_ty sigma_vl) (subst_ty tau) (subst_ty theta_vl).
-Admitted.
-
-Instance AsimplRefl_ty (s: ty) : Asimpl s s | 100.
-Proof. reflexivity. Qed.
-
-Instance AsimplGenComp_ty (sigma sigma': index -> ty)
-(tau tau': subst_of subst_of_ty)
-(theta: index -> ty)
-(E: AsimplGen sigma sigma')
-(E': AsimplSubst_ty tau tau')
-(E'': AsimplComp sigma' (subst_ty tau') theta) : AsimplGen (sigma >>> (subst_ty tau) ) theta.
-Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_ty . Qed.
-
-Instance AsimplSubstUp_ty_vl (sigma_vl tau_vl: index -> vl)
-(E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_ty_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_ty (up_ty_vl sigma_vl) tau_vl.
-Admitted.
-
-
-
-Inductive path  : Type :=
-  
-  | pv : vl -> path
-  | pself : path -> label -> path.
-
-Definition congr_pv {s0 t0: vl} (E0: s0 = t0) : pv s0 = pv t0 :=
-  ap pv E0.
-
-Definition congr_pself {s0: path} {s1: label} {t0: path} {t1: label} (E0: s0 = t0) (E1: s1 = t1) : pself s0 s1 = pself t0 t1 :=
-  apc (ap pself E0) (E1).
-
-Definition subst_of_path  : list Type :=
-  [vl: Type].
-
-Definition toVarRen_path (xi: ren_of subst_of_path) : _ :=
-  let _ := xi in xi.
-
-Definition castren_path_vl (xi: ren_of subst_of_path) : ren_of subst_of_vl :=
-  let xi_vl := xi in xi_vl.
-
-
-
-Definition upren_path_vl (xi: ren_of subst_of_path) : ren_of subst_of_path :=
-  let xi_vl := xi in up_ren xi_vl.
-
-Fixpoint ren_path (xi: ren_of subst_of_path) (s: path) : path :=
-  match s with
-  
-  | pv s0 => pv ((ren_vl (castren_path_vl xi) s0))
-  | pself s0 s1 => pself ((ren_path xi s0)) (s1)
-  end.
-
-Definition toVar_path (sigma: subst_of subst_of_path) : _ :=
-  let _ := sigma in sigma.
-
-
-
-Definition compren_path (sigma: subst_of subst_of_path) (xi: ren_of subst_of_path) : subst_of subst_of_path :=
-  match sigma with
-  | sigma_vl => fun x => ren_vl (castren_path_vl xi) (sigma_vl x)
-  end.
-
-Definition up_path_vl (sigma: subst_of subst_of_path) : subst_of subst_of_path :=
-  match compren_path sigma S with
-  | sigma_vl => scons (var_vl 0) sigma_vl
-  end.
-
-Definition cast_path_vl (sigma: subst_of subst_of_path) : subst_of subst_of_vl :=
-  let sigma_vl := sigma in sigma_vl.
-
-
-
-Definition eq_cast_path_vl {sigma tau: subst_of subst_of_path} (E: eq_of_subst sigma tau)
-  : eq_of_subst (cast_path_vl sigma) (cast_path_vl tau).
-  rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
-  exact (E_vl).
-Defined.
-
-
-
-Fixpoint subst_path (sigma: subst_of subst_of_path) (s: path) : path :=
-  match s with
-  
-  | pv s0 => pv ((subst_vl (cast_path_vl sigma) s0))
-  | pself s0 s1 => pself ((subst_path sigma s0)) (s1)
-  end.
-
-Definition comp_path (sigma tau: subst_of subst_of_path) : subst_of subst_of_path :=
-  match sigma with
-  | sigma_vl => fun x => subst_vl (cast_path_vl tau) (sigma_vl x)
-  end.
-
-Definition substMixin_path  : substMixin path :=
-  {|subst_of_substType := subst_of_path;inst_of_substType := subst_path|}.
-
-Canonical Structure substType_path  : substType :=
-  Eval hnf in @Pack path substMixin_path path.
-
-Definition upId_path_vl (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) : @eq_of_subst subst_of_path (up_path_vl sigma_vl) var_vl :=
-  fun n => match n return (match up_path_vl sigma_vl with
-  | tau_vl => tau_vl n = var_vl  n
-  end) with
-  | 0 => eq_refl
-  | S n => ap (ren_vl (castren_path_vl S)) (E_vl n)
-  end.
-
-Fixpoint id_path (sigma_vl: index -> vl) (E_vl: sigma_vl == var_vl) (s: path) : subst_path sigma_vl s = s :=
-  match s with
-  
-  | pv s0 => ap pv (id_vl _ E_vl s0)
-  | pself s0 s1 => apc (ap pself (id_path _ E_vl s0)) ((eq_refl))
-  end.
-
-Definition toSubst_path (xi: ren_of subst_of_path) : subst_of subst_of_path :=
-  match xi with
-  | xi_vl => fun x => var_vl (xi_vl x)
-  end.
-
-Fixpoint compTrans_ren_ren_path (xi_vl zeta_vl theta_vl: ren) (E_vl: funcomp (xi_vl) (zeta_vl) == theta_vl) (s: path)
-           : ren_path zeta_vl (ren_path xi_vl s) = ren_path theta_vl s :=
-  match s with
-  
-  | pv s0 => ap pv (compTrans_ren_ren_vl xi_vl zeta_vl theta_vl E_vl s0)
-  | pself s0 s1 => apc (ap pself (compTrans_ren_ren_path xi_vl zeta_vl theta_vl E_vl s0)) ((eq_refl))
-  end.
-
-Definition compE_ren_ren_path (xi_vl zeta_vl: ren) (s: path) : ren_path zeta_vl (ren_path xi_vl s) = ren_path (funcomp xi_vl zeta_vl) s :=
-  compTrans_ren_ren_path xi_vl zeta_vl (funcomp xi_vl zeta_vl) (fun _ => eq_refl) s.
-
-Definition up_ren_subst_path_vl (xi_vl: ren) (theta_vl tau_vl: index -> vl) (E_vl: (fun x =>  theta_vl (xi_vl x)) == tau_vl)
-  : @eq_of_subst subst_of_path (comp_path (toSubst_path (upren_path_vl xi_vl)) (up_path_vl theta_vl)) (up_path_vl tau_vl) :=
-  fun n => match n return match comp_path (toSubst_path (upren_path_vl xi_vl)) (up_path_vl theta_vl), up_path_vl tau_vl with
-  | xi_vl, tau_vl => xi_vl n = tau_vl n
-  end with
-  | 0 => eq_refl
-  | S n => ap (ren_vl (castren_path_vl S)) (E_vl n)
-  end.
-
-Fixpoint compTrans_ren_subst_path (xi_vl: ren) (tau_vl theta_vl: index -> vl) (E_vl: (fun x =>  tau_vl (xi_vl x)) == theta_vl) (s: path)
-           : subst_path tau_vl (ren_path xi_vl s) = subst_path theta_vl s :=
-  match s with
-  
-  | pv s0 => ap pv (compTrans_ren_subst_vl xi_vl _ _ E_vl s0)
-  | pself s0 s1 => apc (ap pself (compTrans_ren_subst_path xi_vl _ _ E_vl s0)) ((eq_refl))
-  end.
-
-Definition compE_ren_subst_path (xi_vl: ren) (tau_vl: index -> vl) (s: path)
-  : subst_path tau_vl (ren_path xi_vl s) = subst_path (funcomp xi_vl tau_vl) s :=
-  compTrans_ren_subst_path xi_vl tau_vl (funcomp xi_vl tau_vl) (fun _ => eq_refl) s.
-
-Definition up_subst_ren_path_vl (sigma_vl: index -> vl)
-  (rho_vl: ren)
-  (tau_vl: index -> vl)
-  (E_vl: (fun x =>  ren_vl rho_vl (sigma_vl x)) == tau_vl)
-  : @eq_of_subst subst_of_path (compren_path (up_path_vl sigma_vl) (upren_path_vl rho_vl)) (up_path_vl tau_vl) :=
-  fun n => match n return match compren_path (up_path_vl sigma_vl) (upren_path_vl rho_vl), up_path_vl tau_vl with
-  | sigma_vl, tau_vl => sigma_vl n = tau_vl n
-  end with
-  | 0 => eq_refl
-  | S n =>
-      eq_trans (compE_ren_ren_vl S (up_ren rho_vl) (sigma_vl n)) (eq_trans (eq_sym (compE_ren_ren_vl rho_vl S (sigma_vl n))) (ap (ren_vl S) (E_vl n)))
-  end.
-
-Fixpoint compTrans_subst_ren_path (sigma_vl: index -> vl)
-           (zeta_vl: ren)
-           (theta_vl: index -> vl)
-           (E_vl: (fun x =>  ren_vl zeta_vl (sigma_vl x)) == theta_vl)
-           (s: path) : ren_path zeta_vl (subst_path sigma_vl s) = subst_path theta_vl s :=
-  match s with
-  
-  | pv s0 => ap pv (compTrans_subst_ren_vl _ zeta_vl _ E_vl s0)
-  | pself s0 s1 => apc (ap pself (compTrans_subst_ren_path _ zeta_vl _ E_vl s0)) ((eq_refl))
-  end.
-
-Definition compE_subst_ren_path (sigma_vl: index -> vl) (zeta_vl: ren) (s: path)
-  : ren_path zeta_vl (subst_path sigma_vl s) = subst_path (fun n => ren_vl (zeta_vl) (sigma_vl n)) s :=
-  compTrans_subst_ren_path sigma_vl zeta_vl (fun n => ren_vl (zeta_vl) (sigma_vl n)) (fun _ => eq_refl) s.
-
-Definition up_subst_subst_path_vl (sigma_vl theta_vl tau_vl: index -> vl) (E_vl: (fun x =>  subst_vl theta_vl (sigma_vl x)) == tau_vl)
-  : @eq_of_subst subst_of_path (comp_path (up_path_vl sigma_vl) (up_path_vl theta_vl)) (up_path_vl tau_vl) :=
-  fun n => match n return match comp_path (up_path_vl sigma_vl) (up_path_vl theta_vl), up_path_vl tau_vl with
-  | sigma_vl, tau_vl => sigma_vl n = tau_vl n
-  end with
-  | 0 => eq_refl
-  | S n =>
-      eq_trans (compE_ren_subst_vl S _ (sigma_vl n)) (eq_trans (eq_sym (compE_subst_ren_vl theta_vl S (sigma_vl n))) (ap (ren_vl S) (E_vl n)))
-  end.
-
-Fixpoint compTrans_subst_subst_path (sigma_vl tau_vl theta_vl: index -> vl)
-           (E_vl: (fun x =>  subst_vl tau_vl (sigma_vl x)) == theta_vl)
-           (s: path) : subst_path tau_vl (subst_path sigma_vl s) = subst_path theta_vl s :=
-  match s with
-  
-  | pv s0 => ap pv (compTrans_subst_subst_vl _ _ _ E_vl s0)
-  | pself s0 s1 => apc (ap pself (compTrans_subst_subst_path _ _ _ E_vl s0)) ((eq_refl))
-  end.
-
-Definition compE_subst_subst_path (sigma_vl tau_vl: index -> vl) (s: path)
-  : subst_path tau_vl (subst_path sigma_vl s) = subst_path (fun n => subst_vl (tau_vl) (sigma_vl n)) s :=
-  compTrans_subst_subst_path sigma_vl tau_vl (fun n => subst_vl (tau_vl) (sigma_vl n)) (fun _ => eq_refl) s.
-
-Definition eq_up_path_vl {sigma tau: subst_of subst_of_path} (E: eq_of_subst sigma tau) : eq_of_subst (up_path_vl sigma) (up_path_vl tau).
-  rename sigma into sigma_vl. rename tau into tau_vl. rename E into E_vl.
-  exact (fun i: index => match i return (var_vl 0 .: sigma_vl >>> ren_vl (castren_path_vl S)) i = (var_vl 0 .: tau_vl >>> ren_vl (castren_path_vl S)) i
-  with 0 => eq_refl | S j => ap _ (E_vl j) end).
-Defined.
-
-Fixpoint subst_eq_path {sigma tau: subst_of subst_of_path} (E: eq_of_subst sigma tau) (s: path) : subst_path sigma s = subst_path tau s :=
-  match s with
-  
-  | pv s0 => congr_pv (subst_eq_vl (eq_cast_path_vl E) s0)
-  | pself s0 s1 => congr_pself (subst_eq_path E s0) (eq_refl)
-  end.
-
-Class AsimplInst_path (s: path) (sigma: subst_of subst_of_path) (t: path) := asimplInstEqn_path : (subst_path sigma) s = t .
-Hint Mode AsimplInst_path + + - : typeclass_instance.
-
-Class AsimplSubst_path (sigma tau: subst_of subst_of_path) := asimplSubstEqn_path : match sigma, tau with
-| sigma_vl, tau_vl => (forall x, sigma_vl x = tau_vl x)
-end .
-Hint Mode AsimplSubst_path + - : typeclass_instance.
-
-Class AsimplComp_path (sigma tau theta: subst_of subst_of_path) := asimplCompEqn_path : match comp_path sigma tau, theta with
-| sigma_tau_vl, theta_vl => (forall x, sigma_tau_vl x = theta_vl x)
-end .
-Hint Mode AsimplComp_path + + - : typeclass_instance.
 
 Instance AsimplCast_path_vl (sigma_vl: index -> vl)
 (tau: subst_of subst_of_vl)
@@ -2053,16 +2142,23 @@ Instance asimplInst_pv (s0 s0': _)
 (theta_0: subst_of subst_of_vl)
 (E_0': AsimplSubst_vl (((cast_path_vl sigma))) theta_0)
 (E_0: AsimplInst_vl s0 theta_0 s0') : AsimplInst_path (pv s0) sigma (pv s0').
-Admitted.
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_vl.
+Qed.
+
 Instance asimplInst_pself (s0 s1 s0' s1': _)
 (sigma theta_0: subst_of subst_of_path)
 (theta_1: subst_of subst_of_label)
 (E_0': AsimplSubst_path (sigma) theta_0)
-(E_1': AsimplSubst_label sigma theta_1)
+(* (E_1': AsimplSubst_label sigma theta_1) *)
 (E_0: AsimplInst_path s0 theta_0 s0')
 (E_1: AsimplInst_label s1 theta_1 s1') : AsimplInst_path (pself s0 s1) sigma (pself s0' s1').
-Admitted.
-
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_path.
+  - rewrite <- E_1. reflexivity.
+Qed.
 Instance AsimplId_path (s: path) : AsimplInst_path s var_vl s.
 Proof. apply id_path; reflexivity. Qed.
 
@@ -2071,22 +2167,37 @@ Instance AsimplInstInst_path (s t: path)
 (E1: AsimplSubst_path sigma sigma')
 (E2: AsimplComp_path sigma' tau sigma_tau)
 (E3: AsimplInst_path s sigma_tau t) : AsimplInst_path (subst_path sigma s) tau t.
-Admitted.
+Proof.
+  hnf in *. rewrite <- E3.
+  apply compTrans_subst_subst_path.
+  - intros. rewrite E1. apply E2.
+Qed. 
+
+
 
 Instance AsimplSubstRefl_path (sigma: subst_of subst_of_path) : AsimplSubst_path sigma sigma | 100.
-Admitted.
+Proof. done. Qed.
 
 Instance AsimplSubstComp_path (sigma sigma' tau tau' theta: subst_of subst_of_path)
 (E_sigma: AsimplSubst_path sigma sigma')
 (E_tau: AsimplSubst_path tau tau')
 (E: AsimplComp_path sigma' tau' theta) : AsimplSubst_path (comp_path sigma tau) theta |90.
-Admitted.
+Proof.
+  hnf in *.
+  intro. rewrite <- E.
+  unfold comp_path, cast_path_vl in *.
+  rewrite E_sigma.
+  apply subst_eq_vl.
+  assumption. 
+Qed.
+
+
 
 Instance AsimplSubstCongr_path (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_path sigma_vl tau_vl |95.
 Proof. repeat split; assumption. Qed.
 
 Instance AsimplCompRefl_path (sigma tau: subst_of subst_of_path) : AsimplComp_path sigma tau (comp_path sigma tau) | 100.
-Admitted.
+Proof. done. Qed.
 
 
 
@@ -2096,21 +2207,36 @@ Proof. intros x. apply id_path; reflexivity. Qed.
 Instance AsimplCompAsso_path (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_path)
 (E: AsimplComp_path tau theta tau_theta)
 (E': AsimplComp_path sigma tau_theta sigma_tau_theta) : AsimplComp_path (comp_path sigma tau) theta sigma_tau_theta.
-Admitted.
+Proof.
+  hnf in *. intro.
+  rewrite <- E'.
+  unfold comp_path. erewrite compTrans_subst_subst_vl; eauto.
+Qed. 
+
+
 
 Instance AsimplCompCongr_path (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_path)
 (E_vl: AsimplSubst_vl ((cast_path_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_path sigma_vl tau theta_vl.
-Admitted.
+Proof.
+  hnf in *. intros.
+  rewrite <- E_vl'. simpl. apply subst_eq_vl. auto.
+Qed.
+
+
 
 Instance AsimplCompCongr'_path (sigma_vl theta_vl: index -> vl)
 (tau_vl: subst_of subst_of_vl)
 (tau: subst_of subst_of_path)
 (E_vl: AsimplSubst_vl ((cast_path_vl tau)) tau_vl)
 (E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_path sigma_vl) (subst_path tau) (subst_path theta_vl).
-Admitted.
+Proof.
+  intros s. simpl.
+  erewrite AsimplInstInst_path with (sigma' := sigma_vl) (sigma_tau := theta_vl); try split; auto.
+  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption.
+Qed. 
 
 Instance AsimplRefl_path (s: path) : Asimpl s s | 100.
 Proof. reflexivity. Qed.
@@ -2125,7 +2251,290 @@ Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_path . Qed
 
 Instance AsimplSubstUp_path_vl (sigma_vl tau_vl: index -> vl)
 (E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_path_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_path (up_path_vl sigma_vl) tau_vl.
-Admitted.
+Proof.
+  hnf in*. intro x.
+  rewrite <- E_vl.
+  destruct x; simpl; trivial.
+  unfold compren_path; erewrite ren_inst_vl_vl; reflexivity.
+Qed.
 
 
 
+Instance AsimplCast_ty_vl (sigma_vl: index -> vl)
+(tau: subst_of subst_of_vl)
+(E: AsimplSubst_vl sigma_vl tau) : AsimplSubst_vl ((cast_ty_vl sigma_vl)) tau.
+Proof. apply E. Qed.
+Typeclasses Opaque cast_ty_vl.
+
+
+
+Instance AsimplAsimplInst_ty (s t: ty)
+(sigma sigma': subst_of subst_of_ty)
+(E_sigma: AsimplSubst_ty sigma sigma')
+(E: AsimplInst_ty s sigma' t) : Asimpl (subst_ty sigma s) t.
+Proof. rewrite <- E. apply subst_eq_ty. assumption. Qed.
+
+Instance AsimplInstRefl_ty (s: ty) (sigma: subst_of subst_of_ty) : AsimplInst_ty s sigma (s.[ sigma ]) |100.
+Proof. reflexivity. Qed.
+
+
+
+Instance asimplInst_TTop (sigma: subst_of subst_of_ty) : AsimplInst_ty (TTop ) sigma (TTop ).
+Proof. done. Qed.
+
+Instance asimplInst_TBot (sigma: subst_of subst_of_ty) : AsimplInst_ty (TBot ) sigma (TBot ).
+Proof. done. Qed.
+
+Instance asimplInst_TAnd (s0 s1 s0' s1': _)
+(sigma theta_0 theta_1: subst_of subst_of_ty)
+(E_0': AsimplSubst_ty (sigma) theta_0)
+(E_1': AsimplSubst_ty (sigma) theta_1)
+(E_0: AsimplInst_ty s0 theta_0 s0')
+(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TAnd s0 s1) sigma (TAnd s0' s1').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+  - rewrite <- E_1; auto using subst_eq_ty.
+Qed.
+
+Instance asimplInst_TOr (s0 s1 s0' s1': _)
+(sigma theta_0 theta_1: subst_of subst_of_ty)
+(E_0': AsimplSubst_ty (sigma) theta_0)
+(E_1': AsimplSubst_ty (sigma) theta_1)
+(E_0: AsimplInst_ty s0 theta_0 s0')
+(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TOr s0 s1) sigma (TOr s0' s1').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+  - rewrite <- E_1; auto using subst_eq_ty.
+Qed.
+
+
+Instance asimplInst_TLater (s0 s0': _)
+(sigma theta_0: subst_of subst_of_ty)
+(E_0': AsimplSubst_ty (sigma) theta_0)
+(E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_ty (TLater s0) sigma (TLater s0').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+Qed.
+
+
+Instance asimplInst_TAll (s0 s1 s0' s1': _)
+(sigma theta_0 theta_1: subst_of subst_of_ty)
+(E_0': AsimplSubst_ty (sigma) theta_0)
+(E_1': AsimplSubst_ty ((up_ty_vl sigma)) theta_1)
+(E_0: AsimplInst_ty s0 theta_0 s0')
+(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TAll s0 s1) sigma (TAll s0' s1').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+  - rewrite <- E_1; auto using subst_eq_ty.
+Qed.
+
+Instance asimplInst_TMu (s0 s0': _)
+(sigma theta_0: subst_of subst_of_ty)
+(E_0': AsimplSubst_ty ((up_ty_vl sigma)) theta_0)
+(E_0: AsimplInst_ty s0 theta_0 s0') : AsimplInst_ty (TMu s0) sigma (TMu s0').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+Qed.
+
+Instance asimplInst_TVMem (s0 s1 s0' s1': _)
+(sigma: subst_of subst_of_ty)
+(theta_0: subst_of subst_of_label)
+(theta_1: subst_of subst_of_ty)
+(* (E_0': AsimplSubst_label sigma theta_0) *)
+(E_1': AsimplSubst_ty (sigma) theta_1)
+(E_0: AsimplInst_label s0 theta_0 s0')
+(E_1: AsimplInst_ty s1 theta_1 s1') : AsimplInst_ty (TVMem s0 s1) sigma (TVMem s0' s1').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+  - rewrite <- E_1; auto using subst_eq_ty.
+Qed.
+
+Instance asimplInst_TTMem (s0 s1 s2 s0' s1' s2': _)
+(sigma: subst_of subst_of_ty)
+(theta_0: subst_of subst_of_label)
+(theta_1 theta_2: subst_of subst_of_ty)
+(* (E_0': AsimplSubst_label sigma theta_0) *)
+(E_1': AsimplSubst_ty (sigma) theta_1)
+(E_2': AsimplSubst_ty (sigma) theta_2)
+(E_0: AsimplInst_label s0 theta_0 s0')
+(E_1: AsimplInst_ty s1 theta_1 s1')
+(E_2: AsimplInst_ty s2 theta_2 s2') : AsimplInst_ty (TTMem s0 s1 s2) sigma (TTMem s0' s1' s2').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_ty.
+  - rewrite <- E_1; auto using subst_eq_ty.
+  - rewrite <- E_2; auto using subst_eq_ty.
+Qed.
+
+
+(* Instance asimplInst_TSel (s0 s0': _) *)
+(* (sigma: subst_of subst_of_ty) *)
+(* (theta_0: subst_of subst_of_vl) *)
+(* (E_0': AsimplSubst_vl (((cast_ty_vl sigma))) theta_0) *)
+(* (E_0: AsimplInst_vl s0 theta_0 s0') : AsimplInst_ty (TSel s0) sigma (TSel s0'). *)
+(* Proof. *)
+(*   hnf in *; simpl; f_equal. *)
+(*   - rewrite <- E_0; auto using subst_eq_vl. *)
+(* Qed. *)
+
+
+(* Instance asimplInst_TSelA (s0 s1 s2 s0' s1' s2': _) *)
+(* (sigma: subst_of subst_of_ty) *)
+(* (theta_0: subst_of subst_of_vl) *)
+(* (theta_1 theta_2: subst_of subst_of_ty) *)
+(* (E_0': AsimplSubst_vl (((cast_ty_vl sigma))) theta_0) *)
+(* (E_1': AsimplSubst_ty (sigma) theta_1) *)
+(* (E_2': AsimplSubst_ty (sigma) theta_2) *)
+(* (E_0: AsimplInst_vl s0 theta_0 s0') *)
+(* (E_1: AsimplInst_ty s1 theta_1 s1') *)
+(* (E_2: AsimplInst_ty s2 theta_2 s2') : AsimplInst_ty (TSelA s0 s1 s2) sigma (TSelA s0' s1' s2'). *)
+(* Proof. *)
+(*   hnf in *; simpl; f_equal. *)
+(*   - rewrite <- E_0; auto using subst_eq_vl. *)
+(*   - rewrite <- E_1; auto using subst_eq_ty. *)
+(*   - rewrite <- E_2; auto using subst_eq_ty. *)
+(* Qed. *)
+
+Instance asimplInst_TSel (s0 s1 s0' s1': _)
+(sigma: subst_of subst_of_ty)
+(theta_0: subst_of subst_of_path)
+(theta_1: subst_of subst_of_label)
+(E_0': AsimplSubst_path (((cast_ty_path sigma))) theta_0)
+(* (E_1': AsimplSubst_label sigma theta_1) *)
+(E_0: AsimplInst_path s0 theta_0 s0')
+(E_1: AsimplInst_label s1 theta_1 s1') : AsimplInst_ty (TSel s0 s1) sigma (TSel s0' s1').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_path.
+  - rewrite <- E_1; reflexivity.
+Qed.
+
+
+Instance asimplInst_TSelA (s0 s1 s2 s3 s0' s1' s2' s3': _)
+(sigma: subst_of subst_of_ty)
+(theta_0: subst_of subst_of_path)
+(theta_1: subst_of subst_of_label)
+(theta_2 theta_3: subst_of subst_of_ty)
+(E_0': AsimplSubst_path (((cast_ty_path sigma))) theta_0)
+(* (E_1': AsimplSubst_label sigma theta_1) *)
+(E_2': AsimplSubst_ty (sigma) theta_2)
+(E_3': AsimplSubst_ty (sigma) theta_3)
+(E_0: AsimplInst_path s0 theta_0 s0')
+(E_1: AsimplInst_label s1 theta_1 s1')
+(E_2: AsimplInst_ty s2 theta_2 s2')
+(E_3: AsimplInst_ty s3 theta_3 s3') : AsimplInst_ty (TSelA s0 s1 s2 s3) sigma (TSelA s0' s1' s2' s3').
+Proof.
+  hnf in *; simpl; f_equal.
+  - rewrite <- E_0; auto using subst_eq_path.
+  - rewrite <- E_1; reflexivity.
+  - rewrite <- E_2; auto using subst_eq_ty.
+  - rewrite <- E_3; auto using subst_eq_ty.
+Qed.
+
+
+
+
+Instance AsimplId_ty (s: ty) : AsimplInst_ty s var_vl s.
+Proof. apply id_ty; reflexivity. Qed.
+
+Instance AsimplInstInst_ty (s t: ty)
+(sigma sigma' tau sigma_tau: subst_of subst_of_ty)
+(E1: AsimplSubst_ty sigma sigma')
+(E2: AsimplComp_ty sigma' tau sigma_tau)
+(E3: AsimplInst_ty s sigma_tau t) : AsimplInst_ty (subst_ty sigma s) tau t.
+Proof.
+  hnf in *. rewrite <- E3.
+  apply compTrans_subst_subst_ty.
+  - intros. rewrite E1. apply E2.
+Qed. 
+
+Instance AsimplSubstRefl_ty (sigma: subst_of subst_of_ty) : AsimplSubst_ty sigma sigma | 100.
+Proof. done. Qed.
+
+
+Instance AsimplSubstComp_ty (sigma sigma' tau tau' theta: subst_of subst_of_ty)
+(E_sigma: AsimplSubst_ty sigma sigma')
+(E_tau: AsimplSubst_ty tau tau')
+(E: AsimplComp_ty sigma' tau' theta) : AsimplSubst_ty (comp_ty sigma tau) theta |90.
+Proof.
+  hnf in *.
+  intro. rewrite <- E.
+  unfold comp_ty, cast_ty_vl in *.
+  rewrite E_sigma.
+  apply subst_eq_vl.
+  assumption. 
+Qed.
+
+
+
+Instance AsimplSubstCongr_ty (sigma_vl tau_vl: index -> vl) (E_vl: AsimplGen sigma_vl tau_vl) : AsimplSubst_ty sigma_vl tau_vl |95.
+Proof. repeat split; assumption. Qed.
+
+Instance AsimplCompRefl_ty (sigma tau: subst_of subst_of_ty) : AsimplComp_ty sigma tau (comp_ty sigma tau) | 100.
+Proof. done. Qed.
+
+
+Instance AsimplCompIdR_ty (sigma: index -> ty) : AsimplComp sigma (subst_ty var_vl) sigma.
+Proof. intros x. apply id_ty; reflexivity. Qed.
+
+Instance AsimplCompAsso_ty (sigma tau theta tau_theta sigma_tau_theta: subst_of subst_of_ty)
+(E: AsimplComp_ty tau theta tau_theta)
+(E': AsimplComp_ty sigma tau_theta sigma_tau_theta) : AsimplComp_ty (comp_ty sigma tau) theta sigma_tau_theta.
+Proof.
+  hnf in *. intro.
+  rewrite <- E'.
+  unfold comp_ty. erewrite compTrans_subst_subst_vl; eauto.
+Qed. 
+
+
+
+Instance AsimplCompCongr_ty (sigma_vl theta_vl: index -> vl)
+(tau_vl: subst_of subst_of_vl)
+(tau: subst_of subst_of_ty)
+(E_vl: AsimplSubst_vl ((cast_ty_vl tau)) tau_vl)
+(E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp_ty sigma_vl tau theta_vl.
+Proof.
+  hnf in *. intros.
+  rewrite <- E_vl'. simpl. apply subst_eq_vl. auto.
+Qed.
+
+Instance AsimplCompCongr'_ty (sigma_vl theta_vl: index -> vl)
+(tau_vl: subst_of subst_of_vl)
+(tau: subst_of subst_of_ty)
+(E_vl: AsimplSubst_vl ((cast_ty_vl tau)) tau_vl)
+(E_vl': AsimplComp sigma_vl (subst_vl tau_vl) theta_vl) : AsimplComp (subst_ty sigma_vl) (subst_ty tau) (subst_ty theta_vl).
+Proof.
+  intros s. simpl.
+  erewrite AsimplInstInst_ty with (sigma' := sigma_vl) (sigma_tau := theta_vl); try split; auto.
+  intro. rewrite <- E_vl'. simpl. apply subst_eq_vl. assumption.
+Qed. 
+
+
+
+Instance AsimplRefl_ty (s: ty) : Asimpl s s | 100.
+Proof. reflexivity. Qed.
+
+Instance AsimplGenComp_ty (sigma sigma': index -> ty)
+(tau tau': subst_of subst_of_ty)
+(theta: index -> ty)
+(E: AsimplGen sigma sigma')
+(E': AsimplSubst_ty tau tau')
+(E'': AsimplComp sigma' (subst_ty tau') theta) : AsimplGen (sigma >>> (subst_ty tau) ) theta.
+Proof. intros x. rewrite <- E''. simpl. rewrite E. now apply subst_eq_ty . Qed.
+
+Instance AsimplSubstUp_ty_vl (sigma_vl tau_vl: index -> vl)
+(E_vl: AsimplGen (var_vl 0 .: sigma_vl >>> (subst_vl ((cast_ty_vl (S >>> var_vl))))) tau_vl) : AsimplSubst_ty (up_ty_vl sigma_vl) tau_vl.
+Proof.
+  hnf in*. intro x.
+  rewrite <- E_vl.
+  destruct x; simpl; trivial.
+  unfold compren_ty; erewrite ren_inst_vl_vl; reflexivity.
+Qed.
+
+End Syn.
