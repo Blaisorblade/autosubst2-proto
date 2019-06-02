@@ -3,7 +3,7 @@ Require Import Coq.Numbers.BinNums.
 Definition label := string.
 Definition gname := positive.
 
-Require Export fintype.
+Require Export As.fintype.
 
 Inductive tm (nvl : nat) : Type :=
   | tv : vl (nvl) -> tm (nvl)

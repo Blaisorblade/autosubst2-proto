@@ -1,6 +1,6 @@
 (* Version: 19.09. *)
 
-Require Export axioms.
+Require Export As.axioms.
 
 Definition None := 0.
 Definition Some := S.

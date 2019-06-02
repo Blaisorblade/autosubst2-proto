@@ -3,7 +3,7 @@ Require Import Coq.Numbers.BinNums.
 Definition label := string.
 Definition gname := positive.
 
-Require Export unscoped.
+Require Export As.unscoped.
 
 Inductive tm  : Type :=
   | tv : vl  -> tm

@@ -3,7 +3,7 @@
 (** * Finite Types and Mappings
     Our development utilises well-scoped de Bruijn syntax. This means that the de Bruijn indices are taken from finite types. As a consequence, any kind of substitution or environment used in conjunction with well-scoped syntax takes the form of a mapping from some finite type _I^n_. In particular, _renamings_ are mappings _I^n -> I^m_. Here we develop the theory of how these parts interact.
 *)
-Require Export axioms.
+Require Export As.axioms.
 Set Implicit Arguments.
 Unset Strict Implicit.
 

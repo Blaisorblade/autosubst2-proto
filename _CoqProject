@@ -1,0 +1,6 @@
+-Q dot-test As
+dot-test/axioms.v
+dot-test/dotscoped.v
+dot-test/dotunscoped.v
+dot-test/fintype.v
+dot-test/unscoped.v
