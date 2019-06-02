@@ -8,12 +8,15 @@ Inductive tm (nvl : nat) : Type :=
   | var_vl : (fin) (nvl) -> vl (nvl)
   | vabs : tm ((S) nvl) -> vl (nvl)
   | vobj : dms ((S) nvl) -> vl (nvl)
+ with vls (nvl : nat) : Type :=
+  | vnil : vls (nvl)
+  | vcons : vl (nvl) -> vls (nvl) -> vls (nvl)
  with dms (nvl : nat) : Type :=
   | dnil : dms (nvl)
-  | dcons : dm (nvl) -> dms (nvl) -> dms (nvl)
+  | dcons : label  -> dm (nvl) -> dms (nvl) -> dms (nvl)
  with dm (nvl : nat) : Type :=
   | dtysyn : ty (nvl) -> dm (nvl)
-  | dtysem : gname  -> dm (nvl)
+  | dtysem : gname  -> vls (nvl) -> dm (nvl)
   | dvl : vl (nvl) -> dm (nvl)
  with path (nvl : nat) : Type :=
   | pv : vl (nvl) -> path (nvl)
@@ -46,17 +49,23 @@ Definition congr_vabs { mvl : nat } { s0 : tm ((S) mvl) } { t0 : tm ((S) mvl) } 
 Definition congr_vobj { mvl : nat } { s0 : dms ((S) mvl) } { t0 : dms ((S) mvl) } (H1 : s0 = t0) : vobj (mvl) s0 = vobj (mvl) t0 :=
   (eq_trans) (eq_refl) ((ap) (fun x => vobj (mvl) x) H1).
 
+Definition congr_vnil { mvl : nat } : vnil (mvl) = vnil (mvl) :=
+  eq_refl.
+
+Definition congr_vcons { mvl : nat } { s0 : vl (mvl) } { s1 : vls (mvl) } { t0 : vl (mvl) } { t1 : vls (mvl) } (H1 : s0 = t0) (H2 : s1 = t1) : vcons (mvl) s0 s1 = vcons (mvl) t0 t1 :=
+  (eq_trans) ((eq_trans) (eq_refl) ((ap) (fun x => vcons (mvl) x (_)) H1)) ((ap) (fun x => vcons (mvl) (_) x) H2).
+
 Definition congr_dnil { mvl : nat } : dnil (mvl) = dnil (mvl) :=
   eq_refl.
 
-Definition congr_dcons { mvl : nat } { s0 : dm (mvl) } { s1 : dms (mvl) } { t0 : dm (mvl) } { t1 : dms (mvl) } (H1 : s0 = t0) (H2 : s1 = t1) : dcons (mvl) s0 s1 = dcons (mvl) t0 t1 :=
-  (eq_trans) ((eq_trans) (eq_refl) ((ap) (fun x => dcons (mvl) x (_)) H1)) ((ap) (fun x => dcons (mvl) (_) x) H2).
+Definition congr_dcons { mvl : nat } { s0 : label  } { s1 : dm (mvl) } { s2 : dms (mvl) } { t0 : label  } { t1 : dm (mvl) } { t2 : dms (mvl) } (H1 : s0 = t0) (H2 : s1 = t1) (H3 : s2 = t2) : dcons (mvl) s0 s1 s2 = dcons (mvl) t0 t1 t2 :=
+  (eq_trans) ((eq_trans) ((eq_trans) (eq_refl) ((ap) (fun x => dcons (mvl) x (_) (_)) H1)) ((ap) (fun x => dcons (mvl) (_) x (_)) H2)) ((ap) (fun x => dcons (mvl) (_) (_) x) H3).
 
 Definition congr_dtysyn { mvl : nat } { s0 : ty (mvl) } { t0 : ty (mvl) } (H1 : s0 = t0) : dtysyn (mvl) s0 = dtysyn (mvl) t0 :=
   (eq_trans) (eq_refl) ((ap) (fun x => dtysyn (mvl) x) H1).
 
-Definition congr_dtysem { mvl : nat } { s0 : gname  } { t0 : gname  } (H1 : s0 = t0) : dtysem (mvl) s0 = dtysem (mvl) t0 :=
-  (eq_trans) (eq_refl) ((ap) (fun x => dtysem (mvl) x) H1).
+Definition congr_dtysem { mvl : nat } { s0 : gname  } { s1 : vls (mvl) } { t0 : gname  } { t1 : vls (mvl) } (H1 : s0 = t0) (H2 : s1 = t1) : dtysem (mvl) s0 s1 = dtysem (mvl) t0 t1 :=
+  (eq_trans) ((eq_trans) (eq_refl) ((ap) (fun x => dtysem (mvl) x (_)) H1)) ((ap) (fun x => dtysem (mvl) (_) x) H2).
 
 Definition congr_dvl { mvl : nat } { s0 : vl (mvl) } { t0 : vl (mvl) } (H1 : s0 = t0) : dvl (mvl) s0 = dvl (mvl) t0 :=
   (eq_trans) (eq_refl) ((ap) (fun x => dvl (mvl) x) H1).
@@ -115,15 +124,20 @@ Fixpoint ren_tm { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) 
     | vabs (_) s0 => vabs (nvl) ((ren_tm (upRen_vl_vl xivl)) s0)
     | vobj (_) s0 => vobj (nvl) ((ren_dms (upRen_vl_vl xivl)) s0)
     end
+ with ren_vls { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (s : vls (mvl)) : _ :=
+    match s with
+    | vnil (_)  => vnil (nvl)
+    | vcons (_) s0 s1 => vcons (nvl) ((ren_vl xivl) s0) ((ren_vls xivl) s1)
+    end
  with ren_dms { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (s : dms (mvl)) : _ :=
     match s with
     | dnil (_)  => dnil (nvl)
-    | dcons (_) s0 s1 => dcons (nvl) ((ren_dm xivl) s0) ((ren_dms xivl) s1)
+    | dcons (_) s0 s1 s2 => dcons (nvl) ((fun x => x) s0) ((ren_dm xivl) s1) ((ren_dms xivl) s2)
     end
  with ren_dm { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (s : dm (mvl)) : _ :=
     match s with
     | dtysyn (_) s0 => dtysyn (nvl) ((ren_ty xivl) s0)
-    | dtysem (_) s0 => dtysem (nvl) ((fun x => x) s0)
+    | dtysem (_) s0 s1 => dtysem (nvl) ((fun x => x) s0) ((ren_vls xivl) s1)
     | dvl (_) s0 => dvl (nvl) ((ren_vl xivl) s0)
     end
  with ren_path { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (s : path (mvl)) : _ :=
@@ -161,15 +175,20 @@ Fixpoint subst_tm { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)
     | vabs (_) s0 => vabs (nvl) ((subst_tm (up_vl_vl sigmavl)) s0)
     | vobj (_) s0 => vobj (nvl) ((subst_dms (up_vl_vl sigmavl)) s0)
     end
+ with subst_vls { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (s : vls (mvl)) : _ :=
+    match s with
+    | vnil (_)  => vnil (nvl)
+    | vcons (_) s0 s1 => vcons (nvl) ((subst_vl sigmavl) s0) ((subst_vls sigmavl) s1)
+    end
  with subst_dms { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (s : dms (mvl)) : _ :=
     match s with
     | dnil (_)  => dnil (nvl)
-    | dcons (_) s0 s1 => dcons (nvl) ((subst_dm sigmavl) s0) ((subst_dms sigmavl) s1)
+    | dcons (_) s0 s1 s2 => dcons (nvl) ((fun x => x) s0) ((subst_dm sigmavl) s1) ((subst_dms sigmavl) s2)
     end
  with subst_dm { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (s : dm (mvl)) : _ :=
     match s with
     | dtysyn (_) s0 => dtysyn (nvl) ((subst_ty sigmavl) s0)
-    | dtysem (_) s0 => dtysem (nvl) ((fun x => x) s0)
+    | dtysem (_) s0 s1 => dtysem (nvl) ((fun x => x) s0) ((subst_vls sigmavl) s1)
     | dvl (_) s0 => dvl (nvl) ((subst_vl sigmavl) s0)
     end
  with subst_path { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (s : path (mvl)) : _ :=
@@ -210,15 +229,20 @@ Fixpoint idSubst_tm { mvl : nat } (sigmavl : (fin) (mvl) -> vl (mvl)) (Eqvl : fo
     | vabs (_) s0 => congr_vabs ((idSubst_tm (up_vl_vl sigmavl) (upId_vl_vl (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((idSubst_dms (up_vl_vl sigmavl) (upId_vl_vl (_) Eqvl)) s0)
     end
+ with idSubst_vls { mvl : nat } (sigmavl : (fin) (mvl) -> vl (mvl)) (Eqvl : forall x, sigmavl x = (var_vl (mvl)) x) (s : vls (mvl)) : subst_vls sigmavl s = s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((idSubst_vl sigmavl Eqvl) s0) ((idSubst_vls sigmavl Eqvl) s1)
+    end
  with idSubst_dms { mvl : nat } (sigmavl : (fin) (mvl) -> vl (mvl)) (Eqvl : forall x, sigmavl x = (var_vl (mvl)) x) (s : dms (mvl)) : subst_dms sigmavl s = s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((idSubst_dm sigmavl Eqvl) s0) ((idSubst_dms sigmavl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((idSubst_dm sigmavl Eqvl) s1) ((idSubst_dms sigmavl Eqvl) s2)
     end
  with idSubst_dm { mvl : nat } (sigmavl : (fin) (mvl) -> vl (mvl)) (Eqvl : forall x, sigmavl x = (var_vl (mvl)) x) (s : dm (mvl)) : subst_dm sigmavl s = s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((idSubst_ty sigmavl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((idSubst_vls sigmavl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((idSubst_vl sigmavl Eqvl) s0)
     end
  with idSubst_path { mvl : nat } (sigmavl : (fin) (mvl) -> vl (mvl)) (Eqvl : forall x, sigmavl x = (var_vl (mvl)) x) (s : path (mvl)) : subst_path sigmavl s = s :=
@@ -259,15 +283,20 @@ Fixpoint extRen_tm { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl
     | vabs (_) s0 => congr_vabs ((extRen_tm (upRen_vl_vl xivl) (upRen_vl_vl zetavl) (upExtRen_vl_vl (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((extRen_dms (upRen_vl_vl xivl) (upRen_vl_vl zetavl) (upExtRen_vl_vl (_) (_) Eqvl)) s0)
     end
+ with extRen_vls { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (zetavl : (fin) (mvl) -> (fin) (nvl)) (Eqvl : forall x, xivl x = zetavl x) (s : vls (mvl)) : ren_vls xivl s = ren_vls zetavl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((extRen_vl xivl zetavl Eqvl) s0) ((extRen_vls xivl zetavl Eqvl) s1)
+    end
  with extRen_dms { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (zetavl : (fin) (mvl) -> (fin) (nvl)) (Eqvl : forall x, xivl x = zetavl x) (s : dms (mvl)) : ren_dms xivl s = ren_dms zetavl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((extRen_dm xivl zetavl Eqvl) s0) ((extRen_dms xivl zetavl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((extRen_dm xivl zetavl Eqvl) s1) ((extRen_dms xivl zetavl Eqvl) s2)
     end
  with extRen_dm { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (zetavl : (fin) (mvl) -> (fin) (nvl)) (Eqvl : forall x, xivl x = zetavl x) (s : dm (mvl)) : ren_dm xivl s = ren_dm zetavl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((extRen_ty xivl zetavl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((extRen_vls xivl zetavl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((extRen_vl xivl zetavl Eqvl) s0)
     end
  with extRen_path { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (zetavl : (fin) (mvl) -> (fin) (nvl)) (Eqvl : forall x, xivl x = zetavl x) (s : path (mvl)) : ren_path xivl s = ren_path zetavl s :=
@@ -308,15 +337,20 @@ Fixpoint ext_tm { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) 
     | vabs (_) s0 => congr_vabs ((ext_tm (up_vl_vl sigmavl) (up_vl_vl tauvl) (upExt_vl_vl (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((ext_dms (up_vl_vl sigmavl) (up_vl_vl tauvl) (upExt_vl_vl (_) (_) Eqvl)) s0)
     end
+ with ext_vls { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (tauvl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, sigmavl x = tauvl x) (s : vls (mvl)) : subst_vls sigmavl s = subst_vls tauvl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((ext_vl sigmavl tauvl Eqvl) s0) ((ext_vls sigmavl tauvl Eqvl) s1)
+    end
  with ext_dms { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (tauvl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, sigmavl x = tauvl x) (s : dms (mvl)) : subst_dms sigmavl s = subst_dms tauvl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((ext_dm sigmavl tauvl Eqvl) s0) ((ext_dms sigmavl tauvl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((ext_dm sigmavl tauvl Eqvl) s1) ((ext_dms sigmavl tauvl Eqvl) s2)
     end
  with ext_dm { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (tauvl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, sigmavl x = tauvl x) (s : dm (mvl)) : subst_dm sigmavl s = subst_dm tauvl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((ext_ty sigmavl tauvl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((ext_vls sigmavl tauvl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((ext_vl sigmavl tauvl Eqvl) s0)
     end
  with ext_path { mvl : nat } { nvl : nat } (sigmavl : (fin) (mvl) -> vl (nvl)) (tauvl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, sigmavl x = tauvl x) (s : path (mvl)) : subst_path sigmavl s = subst_path tauvl s :=
@@ -351,15 +385,20 @@ Fixpoint compRenRen_tm { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (
     | vabs (_) s0 => congr_vabs ((compRenRen_tm (upRen_vl_vl xivl) (upRen_vl_vl zetavl) (upRen_vl_vl rhovl) (up_ren_ren (_) (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((compRenRen_dms (upRen_vl_vl xivl) (upRen_vl_vl zetavl) (upRen_vl_vl rhovl) (up_ren_ren (_) (_) (_) Eqvl)) s0)
     end
+ with compRenRen_vls { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (rhovl : (fin) (mvl) -> (fin) (lvl)) (Eqvl : forall x, ((funcomp) zetavl xivl) x = rhovl x) (s : vls (mvl)) : ren_vls zetavl (ren_vls xivl s) = ren_vls rhovl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((compRenRen_vl xivl zetavl rhovl Eqvl) s0) ((compRenRen_vls xivl zetavl rhovl Eqvl) s1)
+    end
  with compRenRen_dms { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (rhovl : (fin) (mvl) -> (fin) (lvl)) (Eqvl : forall x, ((funcomp) zetavl xivl) x = rhovl x) (s : dms (mvl)) : ren_dms zetavl (ren_dms xivl s) = ren_dms rhovl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((compRenRen_dm xivl zetavl rhovl Eqvl) s0) ((compRenRen_dms xivl zetavl rhovl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((compRenRen_dm xivl zetavl rhovl Eqvl) s1) ((compRenRen_dms xivl zetavl rhovl Eqvl) s2)
     end
  with compRenRen_dm { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (rhovl : (fin) (mvl) -> (fin) (lvl)) (Eqvl : forall x, ((funcomp) zetavl xivl) x = rhovl x) (s : dm (mvl)) : ren_dm zetavl (ren_dm xivl s) = ren_dm rhovl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((compRenRen_ty xivl zetavl rhovl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((compRenRen_vls xivl zetavl rhovl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((compRenRen_vl xivl zetavl rhovl Eqvl) s0)
     end
  with compRenRen_path { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (rhovl : (fin) (mvl) -> (fin) (lvl)) (Eqvl : forall x, ((funcomp) zetavl xivl) x = rhovl x) (s : path (mvl)) : ren_path zetavl (ren_path xivl s) = ren_path rhovl s :=
@@ -400,15 +439,20 @@ Fixpoint compRenSubst_tm { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin)
     | vabs (_) s0 => congr_vabs ((compRenSubst_tm (upRen_vl_vl xivl) (up_vl_vl tauvl) (up_vl_vl thetavl) (up_ren_subst_vl_vl (_) (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((compRenSubst_dms (upRen_vl_vl xivl) (up_vl_vl tauvl) (up_vl_vl thetavl) (up_ren_subst_vl_vl (_) (_) (_) Eqvl)) s0)
     end
+ with compRenSubst_vls { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) tauvl xivl) x = thetavl x) (s : vls (mvl)) : subst_vls tauvl (ren_vls xivl s) = subst_vls thetavl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((compRenSubst_vl xivl tauvl thetavl Eqvl) s0) ((compRenSubst_vls xivl tauvl thetavl Eqvl) s1)
+    end
  with compRenSubst_dms { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) tauvl xivl) x = thetavl x) (s : dms (mvl)) : subst_dms tauvl (ren_dms xivl s) = subst_dms thetavl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((compRenSubst_dm xivl tauvl thetavl Eqvl) s0) ((compRenSubst_dms xivl tauvl thetavl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((compRenSubst_dm xivl tauvl thetavl Eqvl) s1) ((compRenSubst_dms xivl tauvl thetavl Eqvl) s2)
     end
  with compRenSubst_dm { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) tauvl xivl) x = thetavl x) (s : dm (mvl)) : subst_dm tauvl (ren_dm xivl s) = subst_dm thetavl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((compRenSubst_ty xivl tauvl thetavl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((compRenSubst_vls xivl tauvl thetavl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((compRenSubst_vl xivl tauvl thetavl Eqvl) s0)
     end
  with compRenSubst_path { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) tauvl xivl) x = thetavl x) (s : path (mvl)) : subst_path tauvl (ren_path xivl s) = subst_path thetavl s :=
@@ -449,15 +493,20 @@ Fixpoint compSubstRen_tm { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (f
     | vabs (_) s0 => congr_vabs ((compSubstRen_tm (up_vl_vl sigmavl) (upRen_vl_vl zetavl) (up_vl_vl thetavl) (up_subst_ren_vl_vl (_) (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((compSubstRen_dms (up_vl_vl sigmavl) (upRen_vl_vl zetavl) (up_vl_vl thetavl) (up_subst_ren_vl_vl (_) (_) (_) Eqvl)) s0)
     end
+ with compSubstRen_vls { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (ren_vl zetavl) sigmavl) x = thetavl x) (s : vls (mvl)) : ren_vls zetavl (subst_vls sigmavl s) = subst_vls thetavl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((compSubstRen_vl sigmavl zetavl thetavl Eqvl) s0) ((compSubstRen_vls sigmavl zetavl thetavl Eqvl) s1)
+    end
  with compSubstRen_dms { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (ren_vl zetavl) sigmavl) x = thetavl x) (s : dms (mvl)) : ren_dms zetavl (subst_dms sigmavl s) = subst_dms thetavl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((compSubstRen_dm sigmavl zetavl thetavl Eqvl) s0) ((compSubstRen_dms sigmavl zetavl thetavl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((compSubstRen_dm sigmavl zetavl thetavl Eqvl) s1) ((compSubstRen_dms sigmavl zetavl thetavl Eqvl) s2)
     end
  with compSubstRen_dm { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (ren_vl zetavl) sigmavl) x = thetavl x) (s : dm (mvl)) : ren_dm zetavl (subst_dm sigmavl s) = subst_dm thetavl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((compSubstRen_ty sigmavl zetavl thetavl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((compSubstRen_vls sigmavl zetavl thetavl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((compSubstRen_vl sigmavl zetavl thetavl Eqvl) s0)
     end
  with compSubstRen_path { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (ren_vl zetavl) sigmavl) x = thetavl x) (s : path (mvl)) : ren_path zetavl (subst_path sigmavl s) = subst_path thetavl s :=
@@ -498,15 +547,20 @@ Fixpoint compSubstSubst_tm { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : 
     | vabs (_) s0 => congr_vabs ((compSubstSubst_tm (up_vl_vl sigmavl) (up_vl_vl tauvl) (up_vl_vl thetavl) (up_subst_subst_vl_vl (_) (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((compSubstSubst_dms (up_vl_vl sigmavl) (up_vl_vl tauvl) (up_vl_vl thetavl) (up_subst_subst_vl_vl (_) (_) (_) Eqvl)) s0)
     end
+ with compSubstSubst_vls { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (subst_vl tauvl) sigmavl) x = thetavl x) (s : vls (mvl)) : subst_vls tauvl (subst_vls sigmavl s) = subst_vls thetavl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((compSubstSubst_vl sigmavl tauvl thetavl Eqvl) s0) ((compSubstSubst_vls sigmavl tauvl thetavl Eqvl) s1)
+    end
  with compSubstSubst_dms { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (subst_vl tauvl) sigmavl) x = thetavl x) (s : dms (mvl)) : subst_dms tauvl (subst_dms sigmavl s) = subst_dms thetavl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((compSubstSubst_dm sigmavl tauvl thetavl Eqvl) s0) ((compSubstSubst_dms sigmavl tauvl thetavl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((compSubstSubst_dm sigmavl tauvl thetavl Eqvl) s1) ((compSubstSubst_dms sigmavl tauvl thetavl Eqvl) s2)
     end
  with compSubstSubst_dm { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (subst_vl tauvl) sigmavl) x = thetavl x) (s : dm (mvl)) : subst_dm tauvl (subst_dm sigmavl s) = subst_dm thetavl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((compSubstSubst_ty sigmavl tauvl thetavl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((compSubstSubst_vls sigmavl tauvl thetavl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((compSubstSubst_vl sigmavl tauvl thetavl Eqvl) s0)
     end
  with compSubstSubst_path { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (thetavl : (fin) (mvl) -> vl (lvl)) (Eqvl : forall x, ((funcomp) (subst_vl tauvl) sigmavl) x = thetavl x) (s : path (mvl)) : subst_path tauvl (subst_path sigmavl s) = subst_path thetavl s :=
@@ -547,15 +601,20 @@ Fixpoint rinst_inst_tm { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) 
     | vabs (_) s0 => congr_vabs ((rinst_inst_tm (upRen_vl_vl xivl) (up_vl_vl sigmavl) (rinstInst_up_vl_vl (_) (_) Eqvl)) s0)
     | vobj (_) s0 => congr_vobj ((rinst_inst_dms (upRen_vl_vl xivl) (up_vl_vl sigmavl) (rinstInst_up_vl_vl (_) (_) Eqvl)) s0)
     end
+ with rinst_inst_vls { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (sigmavl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, ((funcomp) (var_vl (nvl)) xivl) x = sigmavl x) (s : vls (mvl)) : ren_vls xivl s = subst_vls sigmavl s :=
+    match s with
+    | vnil (_)  => congr_vnil 
+    | vcons (_) s0 s1 => congr_vcons ((rinst_inst_vl xivl sigmavl Eqvl) s0) ((rinst_inst_vls xivl sigmavl Eqvl) s1)
+    end
  with rinst_inst_dms { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (sigmavl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, ((funcomp) (var_vl (nvl)) xivl) x = sigmavl x) (s : dms (mvl)) : ren_dms xivl s = subst_dms sigmavl s :=
     match s with
     | dnil (_)  => congr_dnil 
-    | dcons (_) s0 s1 => congr_dcons ((rinst_inst_dm xivl sigmavl Eqvl) s0) ((rinst_inst_dms xivl sigmavl Eqvl) s1)
+    | dcons (_) s0 s1 s2 => congr_dcons ((fun x => (eq_refl) x) s0) ((rinst_inst_dm xivl sigmavl Eqvl) s1) ((rinst_inst_dms xivl sigmavl Eqvl) s2)
     end
  with rinst_inst_dm { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (sigmavl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, ((funcomp) (var_vl (nvl)) xivl) x = sigmavl x) (s : dm (mvl)) : ren_dm xivl s = subst_dm sigmavl s :=
     match s with
     | dtysyn (_) s0 => congr_dtysyn ((rinst_inst_ty xivl sigmavl Eqvl) s0)
-    | dtysem (_) s0 => congr_dtysem ((fun x => (eq_refl) x) s0)
+    | dtysem (_) s0 s1 => congr_dtysem ((fun x => (eq_refl) x) s0) ((rinst_inst_vls xivl sigmavl Eqvl) s1)
     | dvl (_) s0 => congr_dvl ((rinst_inst_vl xivl sigmavl Eqvl) s0)
     end
  with rinst_inst_path { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) (sigmavl : (fin) (mvl) -> vl (nvl)) (Eqvl : forall x, ((funcomp) (var_vl (nvl)) xivl) x = sigmavl x) (s : path (mvl)) : ren_path xivl s = subst_path sigmavl s :=
@@ -584,6 +643,9 @@ Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x =
 Lemma rinstInst_vl { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) : ren_vl xivl = subst_vl ((funcomp) (var_vl (nvl)) xivl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x => rinst_inst_vl xivl (_) (fun n => eq_refl) x)). Qed.
 
+Lemma rinstInst_vls { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) : ren_vls xivl = subst_vls ((funcomp) (var_vl (nvl)) xivl) .
+Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x => rinst_inst_vls xivl (_) (fun n => eq_refl) x)). Qed.
+
 Lemma rinstInst_dms { mvl : nat } { nvl : nat } (xivl : (fin) (mvl) -> (fin) (nvl)) : ren_dms xivl = subst_dms ((funcomp) (var_vl (nvl)) xivl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x => rinst_inst_dms xivl (_) (fun n => eq_refl) x)). Qed.
 
@@ -602,6 +664,9 @@ Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x =
 Lemma instId_vl { mvl : nat } : subst_vl (var_vl (mvl)) = (@id) (vl (mvl)) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x => idSubst_vl (var_vl (mvl)) (fun n => eq_refl) (((@id) (vl (mvl))) x))). Qed.
 
+Lemma instId_vls { mvl : nat } : subst_vls (var_vl (mvl)) = (@id) (vls (mvl)) .
+Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x => idSubst_vls (var_vl (mvl)) (fun n => eq_refl) (((@id) (vls (mvl))) x))). Qed.
+
 Lemma instId_dms { mvl : nat } : subst_dms (var_vl (mvl)) = (@id) (dms (mvl)) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun x => idSubst_dms (var_vl (mvl)) (fun n => eq_refl) (((@id) (dms (mvl))) x))). Qed.
 
@@ -619,6 +684,9 @@ Proof. exact ((eq_trans) (rinstInst_tm ((@id) (_))) instId_tm). Qed.
 
 Lemma rinstId_vl { mvl : nat } : ren_vl ((@id) (_)) = (@id) (vl (mvl)) .
 Proof. exact ((eq_trans) (rinstInst_vl ((@id) (_))) instId_vl). Qed.
+
+Lemma rinstId_vls { mvl : nat } : ren_vls ((@id) (_)) = (@id) (vls (mvl)) .
+Proof. exact ((eq_trans) (rinstInst_vls ((@id) (_))) instId_vls). Qed.
 
 Lemma rinstId_dms { mvl : nat } : ren_dms ((@id) (_)) = (@id) (dms (mvl)) .
 Proof. exact ((eq_trans) (rinstInst_dms ((@id) (_))) instId_dms). Qed.
@@ -644,6 +712,9 @@ Proof. exact (compSubstSubst_tm sigmavl tauvl (_) (fun n => eq_refl) s). Qed.
 Lemma compComp_vl { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (s : vl (mvl)) : subst_vl tauvl (subst_vl sigmavl s) = subst_vl ((funcomp) (subst_vl tauvl) sigmavl) s .
 Proof. exact (compSubstSubst_vl sigmavl tauvl (_) (fun n => eq_refl) s). Qed.
 
+Lemma compComp_vls { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (s : vls (mvl)) : subst_vls tauvl (subst_vls sigmavl s) = subst_vls ((funcomp) (subst_vl tauvl) sigmavl) s .
+Proof. exact (compSubstSubst_vls sigmavl tauvl (_) (fun n => eq_refl) s). Qed.
+
 Lemma compComp_dms { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (s : dms (mvl)) : subst_dms tauvl (subst_dms sigmavl s) = subst_dms ((funcomp) (subst_vl tauvl) sigmavl) s .
 Proof. exact (compSubstSubst_dms sigmavl tauvl (_) (fun n => eq_refl) s). Qed.
 
@@ -661,6 +732,9 @@ Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n =
 
 Lemma compComp'_vl { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) : (funcomp) (subst_vl tauvl) (subst_vl sigmavl) = subst_vl ((funcomp) (subst_vl tauvl) sigmavl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => compComp_vl sigmavl tauvl n)). Qed.
+
+Lemma compComp'_vls { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) : (funcomp) (subst_vls tauvl) (subst_vls sigmavl) = subst_vls ((funcomp) (subst_vl tauvl) sigmavl) .
+Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => compComp_vls sigmavl tauvl n)). Qed.
 
 Lemma compComp'_dms { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) : (funcomp) (subst_dms tauvl) (subst_dms sigmavl) = subst_dms ((funcomp) (subst_vl tauvl) sigmavl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => compComp_dms sigmavl tauvl n)). Qed.
@@ -680,6 +754,9 @@ Proof. exact (compSubstRen_tm sigmavl zetavl (_) (fun n => eq_refl) s). Qed.
 Lemma compRen_vl { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (s : vl (mvl)) : ren_vl zetavl (subst_vl sigmavl s) = subst_vl ((funcomp) (ren_vl zetavl) sigmavl) s .
 Proof. exact (compSubstRen_vl sigmavl zetavl (_) (fun n => eq_refl) s). Qed.
 
+Lemma compRen_vls { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (s : vls (mvl)) : ren_vls zetavl (subst_vls sigmavl s) = subst_vls ((funcomp) (ren_vl zetavl) sigmavl) s .
+Proof. exact (compSubstRen_vls sigmavl zetavl (_) (fun n => eq_refl) s). Qed.
+
 Lemma compRen_dms { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (s : dms (mvl)) : ren_dms zetavl (subst_dms sigmavl s) = subst_dms ((funcomp) (ren_vl zetavl) sigmavl) s .
 Proof. exact (compSubstRen_dms sigmavl zetavl (_) (fun n => eq_refl) s). Qed.
 
@@ -697,6 +774,9 @@ Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n =
 
 Lemma compRen'_vl { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) : (funcomp) (ren_vl zetavl) (subst_vl sigmavl) = subst_vl ((funcomp) (ren_vl zetavl) sigmavl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => compRen_vl sigmavl zetavl n)). Qed.
+
+Lemma compRen'_vls { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) : (funcomp) (ren_vls zetavl) (subst_vls sigmavl) = subst_vls ((funcomp) (ren_vl zetavl) sigmavl) .
+Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => compRen_vls sigmavl zetavl n)). Qed.
 
 Lemma compRen'_dms { kvl : nat } { lvl : nat } { mvl : nat } (sigmavl : (fin) (mvl) -> vl (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) : (funcomp) (ren_dms zetavl) (subst_dms sigmavl) = subst_dms ((funcomp) (ren_vl zetavl) sigmavl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => compRen_dms sigmavl zetavl n)). Qed.
@@ -716,6 +796,9 @@ Proof. exact (compRenSubst_tm xivl tauvl (_) (fun n => eq_refl) s). Qed.
 Lemma renComp_vl { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (s : vl (mvl)) : subst_vl tauvl (ren_vl xivl s) = subst_vl ((funcomp) tauvl xivl) s .
 Proof. exact (compRenSubst_vl xivl tauvl (_) (fun n => eq_refl) s). Qed.
 
+Lemma renComp_vls { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (s : vls (mvl)) : subst_vls tauvl (ren_vls xivl s) = subst_vls ((funcomp) tauvl xivl) s .
+Proof. exact (compRenSubst_vls xivl tauvl (_) (fun n => eq_refl) s). Qed.
+
 Lemma renComp_dms { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) (s : dms (mvl)) : subst_dms tauvl (ren_dms xivl s) = subst_dms ((funcomp) tauvl xivl) s .
 Proof. exact (compRenSubst_dms xivl tauvl (_) (fun n => eq_refl) s). Qed.
 
@@ -733,6 +816,9 @@ Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n =
 
 Lemma renComp'_vl { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) : (funcomp) (subst_vl tauvl) (ren_vl xivl) = subst_vl ((funcomp) tauvl xivl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => renComp_vl xivl tauvl n)). Qed.
+
+Lemma renComp'_vls { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) : (funcomp) (subst_vls tauvl) (ren_vls xivl) = subst_vls ((funcomp) tauvl xivl) .
+Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => renComp_vls xivl tauvl n)). Qed.
 
 Lemma renComp'_dms { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (tauvl : (fin) (kvl) -> vl (lvl)) : (funcomp) (subst_dms tauvl) (ren_dms xivl) = subst_dms ((funcomp) tauvl xivl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => renComp_dms xivl tauvl n)). Qed.
@@ -752,6 +838,9 @@ Proof. exact (compRenRen_tm xivl zetavl (_) (fun n => eq_refl) s). Qed.
 Lemma renRen_vl { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (s : vl (mvl)) : ren_vl zetavl (ren_vl xivl s) = ren_vl ((funcomp) zetavl xivl) s .
 Proof. exact (compRenRen_vl xivl zetavl (_) (fun n => eq_refl) s). Qed.
 
+Lemma renRen_vls { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (s : vls (mvl)) : ren_vls zetavl (ren_vls xivl s) = ren_vls ((funcomp) zetavl xivl) s .
+Proof. exact (compRenRen_vls xivl zetavl (_) (fun n => eq_refl) s). Qed.
+
 Lemma renRen_dms { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) (s : dms (mvl)) : ren_dms zetavl (ren_dms xivl s) = ren_dms ((funcomp) zetavl xivl) s .
 Proof. exact (compRenRen_dms xivl zetavl (_) (fun n => eq_refl) s). Qed.
 
@@ -769,6 +858,9 @@ Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n =
 
 Lemma renRen'_vl { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) : (funcomp) (ren_vl zetavl) (ren_vl xivl) = ren_vl ((funcomp) zetavl xivl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => renRen_vl xivl zetavl n)). Qed.
+
+Lemma renRen'_vls { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) : (funcomp) (ren_vls zetavl) (ren_vls xivl) = ren_vls ((funcomp) zetavl xivl) .
+Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => renRen_vls xivl zetavl n)). Qed.
 
 Lemma renRen'_dms { kvl : nat } { lvl : nat } { mvl : nat } (xivl : (fin) (mvl) -> (fin) (kvl)) (zetavl : (fin) (kvl) -> (fin) (lvl)) : (funcomp) (ren_dms zetavl) (ren_dms xivl) = ren_dms ((funcomp) zetavl xivl) .
 Proof. exact ((FunctionalExtensionality.functional_extensionality _ _ ) (fun n => renRen_dms xivl zetavl n)). Qed.
@@ -793,6 +885,10 @@ Arguments var_vl {nvl}.
 Arguments vabs {nvl}.
 
 Arguments vobj {nvl}.
+
+Arguments vnil {nvl}.
+
+Arguments vcons {nvl}.
 
 Arguments dnil {nvl}.
 
@@ -834,6 +930,8 @@ Instance Subst_tm { mvl : nat } { nvl : nat } : Subst1 ((fin) (mvl) -> vl (nvl))
 
 Instance Subst_vl { mvl : nat } { nvl : nat } : Subst1 ((fin) (mvl) -> vl (nvl)) (vl (mvl)) (vl (nvl)) := @subst_vl (mvl) (nvl) .
 
+Instance Subst_vls { mvl : nat } { nvl : nat } : Subst1 ((fin) (mvl) -> vl (nvl)) (vls (mvl)) (vls (nvl)) := @subst_vls (mvl) (nvl) .
+
 Instance Subst_dms { mvl : nat } { nvl : nat } : Subst1 ((fin) (mvl) -> vl (nvl)) (dms (mvl)) (dms (nvl)) := @subst_dms (mvl) (nvl) .
 
 Instance Subst_dm { mvl : nat } { nvl : nat } : Subst1 ((fin) (mvl) -> vl (nvl)) (dm (mvl)) (dm (nvl)) := @subst_dm (mvl) (nvl) .
@@ -845,6 +943,8 @@ Instance Subst_ty { mvl : nat } { nvl : nat } : Subst1 ((fin) (mvl) -> vl (nvl))
 Instance Ren_tm { mvl : nat } { nvl : nat } : Ren1 ((fin) (mvl) -> (fin) (nvl)) (tm (mvl)) (tm (nvl)) := @ren_tm (mvl) (nvl) .
 
 Instance Ren_vl { mvl : nat } { nvl : nat } : Ren1 ((fin) (mvl) -> (fin) (nvl)) (vl (mvl)) (vl (nvl)) := @ren_vl (mvl) (nvl) .
+
+Instance Ren_vls { mvl : nat } { nvl : nat } : Ren1 ((fin) (mvl) -> (fin) (nvl)) (vls (mvl)) (vls (nvl)) := @ren_vls (mvl) (nvl) .
 
 Instance Ren_dms { mvl : nat } { nvl : nat } : Ren1 ((fin) (mvl) -> (fin) (nvl)) (dms (mvl)) (dms (nvl)) := @ren_dms (mvl) (nvl) .
 
@@ -886,6 +986,14 @@ Notation "[ sigmavl ]" := (subst_vl sigmavl) (at level 1, left associativity, on
 
 Notation "⟨ xivl ⟩" := (ren_vl xivl) (at level 1, left associativity, only printing) : fscope.
 
+Notation "s [ sigmavl ]" := (subst_vls sigmavl s) (at level 7, left associativity, only printing) : subst_scope.
+
+Notation "s ⟨ xivl ⟩" := (ren_vls xivl s) (at level 7, left associativity, only printing) : subst_scope.
+
+Notation "[ sigmavl ]" := (subst_vls sigmavl) (at level 1, left associativity, only printing) : fscope.
+
+Notation "⟨ xivl ⟩" := (ren_vls xivl) (at level 1, left associativity, only printing) : fscope.
+
 Notation "s [ sigmavl ]" := (subst_dms sigmavl s) (at level 7, left associativity, only printing) : subst_scope.
 
 Notation "s ⟨ xivl ⟩" := (ren_dms xivl s) (at level 7, left associativity, only printing) : subst_scope.
@@ -918,11 +1026,11 @@ Notation "[ sigmavl ]" := (subst_ty sigmavl) (at level 1, left associativity, on
 
 Notation "⟨ xivl ⟩" := (ren_ty xivl) (at level 1, left associativity, only printing) : fscope.
 
-Ltac auto_unfold := repeat unfold subst1,  ren1,  subst2,  ren2,  Subst1,  Ren1,  Subst2,  Ren2,  ids,  Subst_tm,  Subst_vl,  Subst_dms,  Subst_dm,  Subst_path,  Subst_ty,  Ren_tm,  Ren_vl,  Ren_dms,  Ren_dm,  Ren_path,  Ren_ty,  VarInstance_vl.
+Ltac auto_unfold := repeat unfold subst1,  ren1,  subst2,  ren2,  Subst1,  Ren1,  Subst2,  Ren2,  ids,  Subst_tm,  Subst_vl,  Subst_vls,  Subst_dms,  Subst_dm,  Subst_path,  Subst_ty,  Ren_tm,  Ren_vl,  Ren_vls,  Ren_dms,  Ren_dm,  Ren_path,  Ren_ty,  VarInstance_vl.
 
-Tactic Notation "auto_unfold" "in" "*" := repeat unfold subst1,  ren1,  subst2,  ren2,  Subst1,  Ren1,  Subst2,  Ren2,  ids,  Subst_tm,  Subst_vl,  Subst_dms,  Subst_dm,  Subst_path,  Subst_ty,  Ren_tm,  Ren_vl,  Ren_dms,  Ren_dm,  Ren_path,  Ren_ty,  VarInstance_vl in *.
+Tactic Notation "auto_unfold" "in" "*" := repeat unfold subst1,  ren1,  subst2,  ren2,  Subst1,  Ren1,  Subst2,  Ren2,  ids,  Subst_tm,  Subst_vl,  Subst_vls,  Subst_dms,  Subst_dm,  Subst_path,  Subst_ty,  Ren_tm,  Ren_vl,  Ren_vls,  Ren_dms,  Ren_dm,  Ren_path,  Ren_ty,  VarInstance_vl in *.
 
-Ltac asimpl' := repeat first [progress rewrite ?instId_tm| progress rewrite ?rinstId_tm| progress rewrite ?compComp_tm| progress rewrite ?compComp'_tm| progress rewrite ?compRen_tm| progress rewrite ?compRen'_tm| progress rewrite ?renComp_tm| progress rewrite ?renComp'_tm| progress rewrite ?renRen_tm| progress rewrite ?renRen'_tm| progress rewrite ?instId_vl| progress rewrite ?rinstId_vl| progress rewrite ?compComp_vl| progress rewrite ?compComp'_vl| progress rewrite ?compRen_vl| progress rewrite ?compRen'_vl| progress rewrite ?renComp_vl| progress rewrite ?renComp'_vl| progress rewrite ?renRen_vl| progress rewrite ?renRen'_vl| progress rewrite ?instId_dms| progress rewrite ?rinstId_dms| progress rewrite ?compComp_dms| progress rewrite ?compComp'_dms| progress rewrite ?compRen_dms| progress rewrite ?compRen'_dms| progress rewrite ?renComp_dms| progress rewrite ?renComp'_dms| progress rewrite ?renRen_dms| progress rewrite ?renRen'_dms| progress rewrite ?instId_dm| progress rewrite ?rinstId_dm| progress rewrite ?compComp_dm| progress rewrite ?compComp'_dm| progress rewrite ?compRen_dm| progress rewrite ?compRen'_dm| progress rewrite ?renComp_dm| progress rewrite ?renComp'_dm| progress rewrite ?renRen_dm| progress rewrite ?renRen'_dm| progress rewrite ?instId_path| progress rewrite ?rinstId_path| progress rewrite ?compComp_path| progress rewrite ?compComp'_path| progress rewrite ?compRen_path| progress rewrite ?compRen'_path| progress rewrite ?renComp_path| progress rewrite ?renComp'_path| progress rewrite ?renRen_path| progress rewrite ?renRen'_path| progress rewrite ?instId_ty| progress rewrite ?rinstId_ty| progress rewrite ?compComp_ty| progress rewrite ?compComp'_ty| progress rewrite ?compRen_ty| progress rewrite ?compRen'_ty| progress rewrite ?renComp_ty| progress rewrite ?renComp'_ty| progress rewrite ?renRen_ty| progress rewrite ?renRen'_ty| progress rewrite ?varL_vl| progress rewrite ?varLRen_vl| progress (unfold up_ren, upRen_vl_vl, up_vl_vl)| progress (cbn [subst_tm subst_vl subst_dms subst_dm subst_path subst_ty ren_tm ren_vl ren_dms ren_dm ren_path ren_ty])| fsimpl].
+Ltac asimpl' := repeat first [progress rewrite ?instId_tm| progress rewrite ?rinstId_tm| progress rewrite ?compComp_tm| progress rewrite ?compComp'_tm| progress rewrite ?compRen_tm| progress rewrite ?compRen'_tm| progress rewrite ?renComp_tm| progress rewrite ?renComp'_tm| progress rewrite ?renRen_tm| progress rewrite ?renRen'_tm| progress rewrite ?instId_vl| progress rewrite ?rinstId_vl| progress rewrite ?compComp_vl| progress rewrite ?compComp'_vl| progress rewrite ?compRen_vl| progress rewrite ?compRen'_vl| progress rewrite ?renComp_vl| progress rewrite ?renComp'_vl| progress rewrite ?renRen_vl| progress rewrite ?renRen'_vl| progress rewrite ?instId_vls| progress rewrite ?rinstId_vls| progress rewrite ?compComp_vls| progress rewrite ?compComp'_vls| progress rewrite ?compRen_vls| progress rewrite ?compRen'_vls| progress rewrite ?renComp_vls| progress rewrite ?renComp'_vls| progress rewrite ?renRen_vls| progress rewrite ?renRen'_vls| progress rewrite ?instId_dms| progress rewrite ?rinstId_dms| progress rewrite ?compComp_dms| progress rewrite ?compComp'_dms| progress rewrite ?compRen_dms| progress rewrite ?compRen'_dms| progress rewrite ?renComp_dms| progress rewrite ?renComp'_dms| progress rewrite ?renRen_dms| progress rewrite ?renRen'_dms| progress rewrite ?instId_dm| progress rewrite ?rinstId_dm| progress rewrite ?compComp_dm| progress rewrite ?compComp'_dm| progress rewrite ?compRen_dm| progress rewrite ?compRen'_dm| progress rewrite ?renComp_dm| progress rewrite ?renComp'_dm| progress rewrite ?renRen_dm| progress rewrite ?renRen'_dm| progress rewrite ?instId_path| progress rewrite ?rinstId_path| progress rewrite ?compComp_path| progress rewrite ?compComp'_path| progress rewrite ?compRen_path| progress rewrite ?compRen'_path| progress rewrite ?renComp_path| progress rewrite ?renComp'_path| progress rewrite ?renRen_path| progress rewrite ?renRen'_path| progress rewrite ?instId_ty| progress rewrite ?rinstId_ty| progress rewrite ?compComp_ty| progress rewrite ?compComp'_ty| progress rewrite ?compRen_ty| progress rewrite ?compRen'_ty| progress rewrite ?renComp_ty| progress rewrite ?renComp'_ty| progress rewrite ?renRen_ty| progress rewrite ?renRen'_ty| progress rewrite ?varL_vl| progress rewrite ?varLRen_vl| progress (unfold up_ren, upRen_vl_vl, up_vl_vl)| progress (cbn [subst_tm subst_vl subst_vls subst_dms subst_dm subst_path subst_ty ren_tm ren_vl ren_vls ren_dms ren_dm ren_path ren_ty])| fsimpl].
 
 Ltac asimpl := repeat try unfold_funcomp; auto_unfold in *; asimpl'; repeat try unfold_funcomp.
 
@@ -930,8 +1038,8 @@ Tactic Notation "asimpl" "in" hyp(J) := revert J; asimpl; intros J.
 
 Tactic Notation "auto_case" := auto_case (asimpl; cbn; eauto).
 
-Tactic Notation "asimpl" "in" "*" := auto_unfold in *; repeat first [progress rewrite ?instId_tm in *| progress rewrite ?rinstId_tm in *| progress rewrite ?compComp_tm in *| progress rewrite ?compComp'_tm in *| progress rewrite ?compRen_tm in *| progress rewrite ?compRen'_tm in *| progress rewrite ?renComp_tm in *| progress rewrite ?renComp'_tm in *| progress rewrite ?renRen_tm in *| progress rewrite ?renRen'_tm in *| progress rewrite ?instId_vl in *| progress rewrite ?rinstId_vl in *| progress rewrite ?compComp_vl in *| progress rewrite ?compComp'_vl in *| progress rewrite ?compRen_vl in *| progress rewrite ?compRen'_vl in *| progress rewrite ?renComp_vl in *| progress rewrite ?renComp'_vl in *| progress rewrite ?renRen_vl in *| progress rewrite ?renRen'_vl in *| progress rewrite ?instId_dms in *| progress rewrite ?rinstId_dms in *| progress rewrite ?compComp_dms in *| progress rewrite ?compComp'_dms in *| progress rewrite ?compRen_dms in *| progress rewrite ?compRen'_dms in *| progress rewrite ?renComp_dms in *| progress rewrite ?renComp'_dms in *| progress rewrite ?renRen_dms in *| progress rewrite ?renRen'_dms in *| progress rewrite ?instId_dm in *| progress rewrite ?rinstId_dm in *| progress rewrite ?compComp_dm in *| progress rewrite ?compComp'_dm in *| progress rewrite ?compRen_dm in *| progress rewrite ?compRen'_dm in *| progress rewrite ?renComp_dm in *| progress rewrite ?renComp'_dm in *| progress rewrite ?renRen_dm in *| progress rewrite ?renRen'_dm in *| progress rewrite ?instId_path in *| progress rewrite ?rinstId_path in *| progress rewrite ?compComp_path in *| progress rewrite ?compComp'_path in *| progress rewrite ?compRen_path in *| progress rewrite ?compRen'_path in *| progress rewrite ?renComp_path in *| progress rewrite ?renComp'_path in *| progress rewrite ?renRen_path in *| progress rewrite ?renRen'_path in *| progress rewrite ?instId_ty in *| progress rewrite ?rinstId_ty in *| progress rewrite ?compComp_ty in *| progress rewrite ?compComp'_ty in *| progress rewrite ?compRen_ty in *| progress rewrite ?compRen'_ty in *| progress rewrite ?renComp_ty in *| progress rewrite ?renComp'_ty in *| progress rewrite ?renRen_ty in *| progress rewrite ?renRen'_ty in *| progress rewrite ?varL_vl in *| progress rewrite ?varLRen_vl in *| progress (unfold up_ren, upRen_vl_vl, up_vl_vl in *)| progress (cbn [subst_tm subst_vl subst_dms subst_dm subst_path subst_ty ren_tm ren_vl ren_dms ren_dm ren_path ren_ty] in *)| fsimpl in *].
+Tactic Notation "asimpl" "in" "*" := auto_unfold in *; repeat first [progress rewrite ?instId_tm in *| progress rewrite ?rinstId_tm in *| progress rewrite ?compComp_tm in *| progress rewrite ?compComp'_tm in *| progress rewrite ?compRen_tm in *| progress rewrite ?compRen'_tm in *| progress rewrite ?renComp_tm in *| progress rewrite ?renComp'_tm in *| progress rewrite ?renRen_tm in *| progress rewrite ?renRen'_tm in *| progress rewrite ?instId_vl in *| progress rewrite ?rinstId_vl in *| progress rewrite ?compComp_vl in *| progress rewrite ?compComp'_vl in *| progress rewrite ?compRen_vl in *| progress rewrite ?compRen'_vl in *| progress rewrite ?renComp_vl in *| progress rewrite ?renComp'_vl in *| progress rewrite ?renRen_vl in *| progress rewrite ?renRen'_vl in *| progress rewrite ?instId_vls in *| progress rewrite ?rinstId_vls in *| progress rewrite ?compComp_vls in *| progress rewrite ?compComp'_vls in *| progress rewrite ?compRen_vls in *| progress rewrite ?compRen'_vls in *| progress rewrite ?renComp_vls in *| progress rewrite ?renComp'_vls in *| progress rewrite ?renRen_vls in *| progress rewrite ?renRen'_vls in *| progress rewrite ?instId_dms in *| progress rewrite ?rinstId_dms in *| progress rewrite ?compComp_dms in *| progress rewrite ?compComp'_dms in *| progress rewrite ?compRen_dms in *| progress rewrite ?compRen'_dms in *| progress rewrite ?renComp_dms in *| progress rewrite ?renComp'_dms in *| progress rewrite ?renRen_dms in *| progress rewrite ?renRen'_dms in *| progress rewrite ?instId_dm in *| progress rewrite ?rinstId_dm in *| progress rewrite ?compComp_dm in *| progress rewrite ?compComp'_dm in *| progress rewrite ?compRen_dm in *| progress rewrite ?compRen'_dm in *| progress rewrite ?renComp_dm in *| progress rewrite ?renComp'_dm in *| progress rewrite ?renRen_dm in *| progress rewrite ?renRen'_dm in *| progress rewrite ?instId_path in *| progress rewrite ?rinstId_path in *| progress rewrite ?compComp_path in *| progress rewrite ?compComp'_path in *| progress rewrite ?compRen_path in *| progress rewrite ?compRen'_path in *| progress rewrite ?renComp_path in *| progress rewrite ?renComp'_path in *| progress rewrite ?renRen_path in *| progress rewrite ?renRen'_path in *| progress rewrite ?instId_ty in *| progress rewrite ?rinstId_ty in *| progress rewrite ?compComp_ty in *| progress rewrite ?compComp'_ty in *| progress rewrite ?compRen_ty in *| progress rewrite ?compRen'_ty in *| progress rewrite ?renComp_ty in *| progress rewrite ?renComp'_ty in *| progress rewrite ?renRen_ty in *| progress rewrite ?renRen'_ty in *| progress rewrite ?varL_vl in *| progress rewrite ?varLRen_vl in *| progress (unfold up_ren, upRen_vl_vl, up_vl_vl in *)| progress (cbn [subst_tm subst_vl subst_vls subst_dms subst_dm subst_path subst_ty ren_tm ren_vl ren_vls ren_dms ren_dm ren_path ren_ty] in *)| fsimpl in *].
 
-Ltac substify := auto_unfold; try repeat (erewrite rinst_inst_tm; [|now intros]); try repeat (erewrite rinst_inst_vl; [|now intros]); try repeat (erewrite rinst_inst_dms; [|now intros]); try repeat (erewrite rinst_inst_dm; [|now intros]); try repeat (erewrite rinst_inst_path; [|now intros]); try repeat (erewrite rinst_inst_ty; [|now intros]).
+Ltac substify := auto_unfold; try repeat (erewrite rinst_inst_tm; [|now intros]); try repeat (erewrite rinst_inst_vl; [|now intros]); try repeat (erewrite rinst_inst_vls; [|now intros]); try repeat (erewrite rinst_inst_dms; [|now intros]); try repeat (erewrite rinst_inst_dm; [|now intros]); try repeat (erewrite rinst_inst_path; [|now intros]); try repeat (erewrite rinst_inst_ty; [|now intros]).
 
-Ltac renamify := auto_unfold; try repeat (erewrite <- rinst_inst_tm; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_vl; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_dms; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_dm; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_path; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_ty; [|intros; now asimpl]).
+Ltac renamify := auto_unfold; try repeat (erewrite <- rinst_inst_tm; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_vl; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_vls; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_dms; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_dm; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_path; [|intros; now asimpl]); try repeat (erewrite <- rinst_inst_ty; [|intros; now asimpl]).

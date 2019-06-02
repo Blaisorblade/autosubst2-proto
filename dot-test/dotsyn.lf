@@ -1,9 +1,11 @@
-tm: Type
-vl: Type
-dms: Type
-dm: Type
 label: Type
 gname: Type
+
+tm: Type
+vl: Type
+vls: Type
+dms: Type
+dm: Type
 
 vabs: (vl -> tm) -> vl
 vobj : (vl -> dms) -> vl
@@ -13,11 +15,14 @@ tapp: tm -> tm -> tm
 tproj : tm -> label -> tm
 
 dtysyn: ty -> dm
-dtysem: gname -> dm
+dtysem: gname -> vls -> dm
 dvl: vl -> dm
 
 dnil: dms
-dcons: dm -> dms -> dms
+dcons: label -> dm -> dms -> dms
+
+vnil : vls
+vcons : vl -> vls -> vls
 
 path: Type
 ty: Type
